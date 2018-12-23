@@ -8,6 +8,7 @@ use App\Rule\Yc\Qidian;
 use App\Component\Format;
 use Kuxin\Controller;
 use Kuxin\DI;
+use Kuxin\Helper\Json;
 use Kuxin\Helper\Math;
 use Kuxin\Input;
 use Kuxin\Loader;
@@ -158,7 +159,7 @@ class Novel extends Controller
         if (Config::get('chapter_cache_power')) {
             $cache  = DI::Cache('txt');
             $param  = ['url' => $url, 'novelid' => $novelid, 'chapterid' => $chapterid];
-            $key    = md5(json_encode($param));
+            $key    = md5(Json::encode($param));
             $result = $cache->get($key, function () use ($param, $cache, $key) {
                 $result = $this->_getChapter($param);
                 if (mb_strlen($result['content']) < 100) {
