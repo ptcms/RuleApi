@@ -22,7 +22,7 @@ class Novel extends Controller
      * @var array
      */
     public $rule = [
-        'qidian'          => Qidian::class,
+        'qidian' => Qidian::class,
 
     ];
 
@@ -39,10 +39,10 @@ class Novel extends Controller
         if (isset($this->rule[$site])) {
             $classname = $this->rule[$site];
         } else {
-            if(is_file(KX_ROOT.'/app/model/custom/'.$site.'.php')){
-                Loader::import(KX_ROOT.'/app/model/custom/'.$site.'.php');
-                $classname='\\App\\Rule\\Custom\\'.$site;
-            }else{
+            if (is_file(KX_ROOT . '/app/model/custom/' . $site . '.php')) {
+                Loader::import(KX_ROOT . '/app/model/custom/' . $site . '.php');
+                $classname = '\\App\\Rule\\Custom\\' . $site;
+            } else {
                 return [
                     'status' => 0,
                     'info'   => 'error',
@@ -53,7 +53,7 @@ class Novel extends Controller
         $this->model = Loader::instance($classname);
     }
 
-    public function getlist():array
+    public function getlist(): array
     {
         $page   = Input::get('page', 'int', 1);
         $result = $this->model->getList($page);
@@ -77,7 +77,7 @@ class Novel extends Controller
      *
      * @return array
      */
-    public function getinfo():array
+    public function getinfo(): array
     {
         $novelid = Input::request('novelid', 'str');
         $result  = $this->model->getInfo($novelid);
@@ -116,7 +116,7 @@ class Novel extends Controller
      * 获取目录结果
      * @return array
      */
-    public function getdir():array
+    public function getdir(): array
     {
         $novelid = Input::request('novelid', 'str');
         $result  = $this->model->getDir($novelid);
@@ -150,16 +150,17 @@ class Novel extends Controller
      * 获取章节结果
      * @return array
      */
-    public function getchapter():array
+    public function getchapter(): array
     {
         $url       = Input::request('url', 'str', '');
         $novelid   = Input::request('novelid', 'str', '');
         $chapterid = Input::request('chapterid', 'str', Input::request('url', 'str', ''));
         if (Config::get('chapter_cache_power')) {
             $cache  = DI::Cache('txt');
-            $key    = md5($url);
-            $result = $cache->get($key, function () use ($url, $novelid, $chapterid, $cache, $key) {
-                $result = $this->_getChapter(['url' => $url, 'novelid' => $novelid, 'chapterid' => $chapterid]);
+            $param  = ['url' => $url, 'novelid' => $novelid, 'chapterid' => $chapterid];
+            $key    = md5(json_encode($param));
+            $result = $cache->get($key, function () use ($param, $cache, $key) {
+                $result = $this->_getChapter($param);
                 if (mb_strlen($result['content']) < 100) {
                     $time = 60;
                 } elseif (strpos($result['content'], '手打') || strpos($result['content'], '防盗') || mb_strlen($result['content']) < 500) {
@@ -197,7 +198,7 @@ class Novel extends Controller
      * @param $param
      * @return array
      */
-    protected function _getChapter($param):array
+    protected function _getChapter($param): array
     {
         $param['subnovelid'] = Math::subid($param['novelid']);
         $result              = $this->model->getChapter($param);
@@ -212,7 +213,7 @@ class Novel extends Controller
      *
      * @return array
      */
-    public function getSearch():array
+    public function getSearch(): array
     {
         $name   = Input::request('name', 'str', '');
         $author = Input::request('author', 'str', '');
@@ -236,7 +237,7 @@ class Novel extends Controller
      *
      * @return array
      */
-    public function getDown():array
+    public function getDown(): array
     {
         $novelid = Input::request('novelid', 'str', '');
         $result  = $this->model->getDown($novelid);
