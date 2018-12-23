@@ -31,7 +31,7 @@ return [
                 'port' => '11211',
             ],
         ],
-        'txt' => [
+        'txt'    => [
             'driver' => 'file',
             'option' => [
                 'path' => KX_ROOT . '/storage/txt',
@@ -41,19 +41,19 @@ return [
 
 
     'storage' => [
-        'runtime'  => [
+        'runtime' => [
             'driver' => 'file',
             'option' => [
                 'path' => KX_ROOT . '/storage/runtime',
             ],
         ],
-        'log'      => [
+        'log'     => [
             'driver' => 'file',
             'option' => [
                 'path' => KX_ROOT . '/storage/log',
             ],
         ],
-        'cover'    => [
+        'cover'   => [
             'driver' => 'file',
             'option' => [
                 'path' => KX_ROOT . '/public/cover',
@@ -144,5 +144,5 @@ return [
         "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:15.0) Gecko/20100101 Firefox/15.0.1",
     ],
 
-    'chapter_cache_power' => !defined('CHAPTER_CACHE') || (defined('CHAPTER_CACHE') && CHAPTER_CACHE)
+    'chapter_cache_power' => defined('CHAPTER_CACHE') ? CHAPTER_CACHE : false,
 ];
