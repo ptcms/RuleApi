@@ -33,7 +33,6 @@ class Loader
             if (is_file($filename)) {
                 self::$_importFiles[$filename] = require $filename;
             } else {
-                trigger_error('文件不存在[ ' . $filename . ' ]', E_USER_ERROR);
                 return false;
             }
         }
