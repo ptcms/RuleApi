@@ -87,7 +87,7 @@ class Qidian extends Kernel
         if (empty($data)) {
             return '解析内容失败：链接 ' . $url;
         } else {
-            if($data[0]['vN']=='作品相关'){
+            if ($data[0]['vN'] == '作品相关') {
                 array_shift($data);
             }
             foreach ($data as $k => $v) {
@@ -108,14 +108,14 @@ class Qidian extends Kernel
 
     public function getChapter($param)
     {
-        $url            = "https://m.qidian.com/book/{$param['novelid']}/{$param['url']}";
+        $url            = "https://m.qidian.com/book/{$param['novelid']}/{$param['chapterid']}";
         $content        = Collect::getContent($url);
         $jscontent      = collect::getMatch('g_data.chapter = (.+?);\s*g_data', $content);
         $jscontent      = Json::decode($jscontent);
         $chapterContent = $jscontent['content'] . "\n\n" . $jscontent['authorWords']['content'];
         return [
             'name'    => $jscontent['chapterName'],
-            'content' => $chapterContent,
+            'content' => Format::chapter($chapterContent),
             'url'     => $url,
             'isvip'   => $jscontent['vipStatus'],
         ];
