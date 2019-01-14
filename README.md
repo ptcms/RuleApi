@@ -104,3 +104,10 @@ PTCMS 小说规则API接口程序
 使用前请先修改`app\controller\index.php`文件`proxy`方法的代理获取url  
 在规则文件中增加`protected $useProxy=1;` 即可对规则启用代理功能  
 更新代理则是定时访问 `http://www.ptcms.com/index/proxy`    
+
+# 章节缓存
+## 开关
+在`env.php`定义常量`CHAPTER_POWER` 如`const CHAPTER_POWER = true;`
+
+## 路径
+修改配置文件`app\config\kuxin.php`中`storage.txt`的配置
