@@ -9,6 +9,11 @@ use Kuxin\Helper\Json;
 
 class Qidian extends Kernel
 {
+    
+    /**
+     * 代理开关
+     */
+    protected $useProxy = 0;
 
     public function getList($page)
     {
