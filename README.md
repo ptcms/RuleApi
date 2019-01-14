@@ -100,7 +100,7 @@ PTCMS 小说规则API接口程序
 参考`app\rule\custom\customqidian.php` 文件新增规则，以此为例，增加的新规则`site`的值为`customqidian`
 
 # 代理使用
-目前已支持芝麻代理
-使用前请先修改`app\controller\index.php`文件`proxy`方法的代理获取url
-在规则文件中增加`protected $useProxy=1;` 即可对规则启用代理功能
-更新代理则是定时访问 `http://www.ptcms.com/index/proxy` url即可
+目前已支持芝麻代理  
+使用前请先修改`app\controller\index.php`文件`proxy`方法的代理获取url  
+在规则文件中增加`protected $useProxy=1;` 即可对规则启用代理功能  
+更新代理则是定时访问 `http://www.ptcms.com/index/proxy` url即可  
