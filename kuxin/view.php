@@ -23,6 +23,8 @@ class View
     protected static $_layout = false;
     // layout 模板
     protected static $_layoutFile = '';
+    // 文件后缀
+    protected static $suffix = '.phtml';
 
     /**
      * 开启layout
@@ -58,7 +60,7 @@ class View
     }
 
     /**
-     * @param $path
+     * @param string $path
      */
     public static function setPath(string $path)
     {
@@ -122,7 +124,7 @@ class View
      *
      * @access public
      * @param string $file 视图片段文件名称
-     * @param array $data 附加数据
+     * @param array  $data 附加数据
      * @return string
      */
     public static function make(?string $file = null, ?array $data = [])
@@ -151,13 +153,13 @@ class View
     {
         $tpl = $tpl === null ? self::$_file : $tpl;
         if ($tpl === null) {
-            $filepath = self::getPath() . '/' . str_replace('\\', '/', Router::$controller) . '/' . Router::$action . '.html';
+            $filepath = self::getPath() . '/' . str_replace('\\', '/', Router::$controller) . '/' . Router::$action . self::$suffix;
         } elseif (substr($tpl, 0, 1) === '/') {
-            $filepath = KX_ROOT . $tpl;
+            $filepath = self::getPath() . $tpl . self::$suffix;
         } elseif (substr($tpl, 0, 1) === '@') {
-            $filepath = self::getPath() . '/' . substr($tpl, 1) . '.html';
+            $filepath = self::getPath() . '/' . substr($tpl, 1) . self::$suffix;
         } else {
-            $filepath = dirname(self::getPath() . '/' . str_replace('\\', '/', Router::$controller)) . '/' . $tpl . '.html';
+            $filepath = dirname(self::getPath() . '/' . str_replace('\\', '/', Router::$controller)) . '/' . $tpl . self::$suffix;
         }
         if (is_file($filepath)) {
             return realpath($filepath);
@@ -205,7 +207,8 @@ class View
     protected static function replace(string $content)
     {
         $replace = [
-            '__RUNINFO__' => '<?php echo Response::runinfo();?>', // 站点公共目录
+            '__RUNINFO__' => '<?php echo \Kuxin\Response::runinfo();?>', // 站点公共目录
+            '__SELF__'    => '<?php echo $_SERVER[\'REQUEST_URI\'];?>', // 站点公共目录
         ];
         $content = strtr($content, $replace);
         // 判断是否显示runtime info 信息
@@ -228,29 +231,56 @@ class View
         if (!preg_match('/' . $left . '.*?' . $right . '/s', $content))
             return $content;
         // 解析载入
-        $content = preg_replace_callback('/' . $left . 'include\s+file\s*\=\s*(\'|\")([^\}]*?)\1\s*' . $right . '/i', ['self', 'parseInlcude'], $content);
+        $content = preg_replace_callback('/' . $left . 'include\s+file\s*\=\s*(\'|\")([^\}]*?)\1\s*' . $right . '/i', [
+            'self',
+            'parseInlcude',
+        ], $content);
         // 解析代码
-        $content = preg_replace_callback('/' . $left . '(code|php)' . $right . '(.*?)' . $left . '\/\1' . $right . '/is', ['self', 'parseEncode'], $content);
+        $content = preg_replace_callback('/' . $left . '(code|php)' . $right . '(.*?)' . $left . '\/\1' . $right . '/is', [
+            'self',
+            'parseEncode',
+        ], $content);
         // 模板注释
         $content = preg_replace('/' . $left . '\/\*.*?\*\/' . $right . '/s', '', $content);
         $content = preg_replace('/' . $left . '\/\/.*?' . $right . '/', '', $content);
         // 解析变量
-        $content = preg_replace_callback('/' . $left . '(\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*))((?:\s*\|\s*[\w\:]+(?:\s*=\s*(?:@|"[^"]*"|\'[^\']*\'|#[\w\-]+|\$[\w\-]+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*)|[^\|\:,"\'\s]*?)(?:\s*,\s*(?:@|"[^"]*"|\'[^\']*\'|#[\w\-]+|\$[\w\-]+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*)|[^\|\:,"\'\s]*?))*)?)*)\s*' . $right . '/', ['self', 'parseVariable'], $content);
+        $content = preg_replace_callback('/' . $left . '(\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*))((?:\s*\|\s*[\w\:]+(?:\s*=\s*(?:@|"[^"]*"|\'[^\']*\'|#[\w\-]+|\$[\w\-]+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*)|[^\|\:,"\'\s]*?)(?:\s*,\s*(?:@|"[^"]*"|\'[^\']*\'|#[\w\-]+|\$[\w\-]+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.[\w\-]+)*)|[^\|\:,"\'\s]*?))*)?)*)\s*' . $right . '/', [
+            'self',
+            'parseVariable',
+        ], $content);
         // 解析函数
-        $content = preg_replace_callback('/' . $left . '(\=|~)\s*(.+?)\s*' . $right . '/', ['self', 'parseFunction'], $content);
+        $content = preg_replace_callback('/' . $left . '(\=|~)\s*(.+?)\s*' . $right . '/', [
+            'self',
+            'parseFunction',
+        ], $content);
         // 解析判断
-        $content = preg_replace_callback('/' . $left . '(if|else\s*if)\s+(.+?)\s*' . $right . '/', ['self', 'parseJudgment'], $content);
+        $content = preg_replace_callback('/' . $left . '(if|else\s*if)\s+(.+?)\s*' . $right . '/', [
+            'self',
+            'parseJudgment',
+        ], $content);
         $content = preg_replace('/' . $left . 'else\s*' . $right . '/i', '<?php else:?>', $content);
         $content = preg_replace('/' . $left . 'sectionelse\s*' . $right . '/i', '<?php endforeach;else:foreach(array(1) as $__loop):?>', $content);
         $content = preg_replace('/' . $left . '\/if\s*' . $right . '/i', '<?php endif;?>', $content);
         // 解析链接
-        $content = preg_replace_callback('/' . $left . 'link\=((?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?)(?:(?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))*?))\s*' . $right . '/i', ['self', 'parseLink'], $content);
+        $content = preg_replace_callback('/' . $left . 'link\=((?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?)(?:(?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))*?))\s*' . $right . '/i', [
+            'self',
+            'parseLink',
+        ], $content);
         // 解析微件
-        $content = preg_replace_callback('/' . $left . 'block((?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))+)\s*' . $right . '/i', ['self', 'parseBlock'], $content);
+        $content = preg_replace_callback('/' . $left . 'block((?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))+)\s*' . $right . '/i', [
+            'self',
+            'parseBlock',
+        ], $content);
         // 解析循环
-        $content = preg_replace_callback('/' . $left . 'loop\s*=([\'|"]?)(\$?\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*))\1\s*' . $right . '/i', ['self', 'parseLoop'], $content);
+        $content = preg_replace_callback('/' . $left . 'loop\s*=([\'|"]?)(\$?\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*))\1\s*' . $right . '/i', [
+            'self',
+            'parseLoop',
+        ], $content);
         $content = preg_replace_callback('/' . $left . 'loop' . $right . '/i', ['self', 'parseLoop'], $content);
-        $content = preg_replace_callback('/' . $left . 'section((?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))+)\s*' . $right . '/i', ['self', 'parseSection'], $content);
+        $content = preg_replace_callback('/' . $left . 'section((?:\s+\w+\s*\=\s*(?:"[^"]*"|\'[^\']*\'|#\w+|\$\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*)|[^"\'\s]+?))+)\s*' . $right . '/i', [
+            'self',
+            'parseSection',
+        ], $content);
         $content = preg_replace('/' . $left . '\/(?:loop|section)\s*' . $right . '/i', '<?php endforeach; endif;?>', $content);
         // 还原代码
         $content = preg_replace_callback('/' . chr(2) . '(.*?)' . chr(3) . '/', ['self', 'parseDecode'], $content);
@@ -276,7 +306,7 @@ class View
      */
     public static function parseCss(string $match)
     {
-        return '<style type = "text/css">' . self::compressCss($match['1']) . '</style>';
+        return '<style type = "text/css">' . self::compressCss($match[1]) . '</style>';
     }
 
     /**
@@ -287,7 +317,7 @@ class View
      */
     public static function parseJs(string $march)
     {
-        return str_replace($march['1'], self::compressJS($march['1']), $march['0']);
+        return str_replace($march[1], self::compressJS($march[1]), $march[0]);
     }
 
 
@@ -300,8 +330,9 @@ class View
     private static function parseVar($var)
     {
         $var = is_array($var) ? reset($var) : trim($var);
-        if (substr($var, 0, 1) !== '$')
+        if (substr($var, 0, 1) !== '$') {
             $var = '$' . $var;
+        }
         if (preg_match('/^\$\w+(\.[\w\-]+)+$/', $var)) {
             if (substr($var, 0, 4) === '$kx.') {
                 $vars = array_pad(explode('.', $var, 3), 3, '');
@@ -315,6 +346,9 @@ class View
                     case 'config':
                         $var = '\Kuxin\Config::get("' . $vars[2] . '")';
                         break;
+                    case 'tplconfig':
+                        $var = 'self::getTplConfig("' . $vars[2] . '")';
+                        break;
                     case 'get':
                         $var = '$_GET[\'' . $vars[2] . '\']';
                         break;
@@ -327,13 +361,18 @@ class View
                     case 'cookie':
                         $var = 'Cookie("' . $vars[2] . '")';
                         break;
+                    case 'ad':
+                        $var = 'self::getAd("' . $vars[2] . '")';
+                        break;
                     default:
                         $var = strtoupper($vars[1]);
                         break;
                 }
             } else {
-                $var = preg_replace('/\.(\w+)/', '[\'\1\']', $var);
+                $var = preg_replace('/\.(\w+)/', '[\'\1\']', strtolower($var));
             }
+        } else {
+            $var = strtolower($var);
         }
         return $var;
     }
@@ -350,7 +389,7 @@ class View
         preg_match_all('/(?:^|\s+)(\w+)\s*\=\s*(?|(")([^"]*)"|(\')([^\']*)\'|(#)(\w+)|(\$)(\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*))|()([^"\'\s]+?))(?=\s+\w+\s*\=|$)/', $string, $match);
         foreach ($match[0] as $key => $value) {
             $name  = strtolower($match[1][$key]);
-            $value = trim($match[3][$key]);
+            $value = strtolower(trim($match[3][$key]));
             if (isset($format[$name]) && is_bool($format[$name])) {
                 $attribute[$name] = $format[$name] ? self::parseVar($value) : $value;
             } else {
@@ -395,6 +434,8 @@ class View
                     return "<?php include \\Kuxin\\View::parseTpl($variable);?>";
                 } elseif (in_array($function, ['date', 'default'])) {
                     $function = "\\Kuxin\\View::{$function}";
+                } elseif (in_array($function, ['truncate'])) {
+                    $function = "\\Kuxin\\Helper\\Str::{$function}";
                 }
                 $param = [$variable];
                 preg_match_all('/(?:=|,)\s*(?|(@)|(")([^"]*)"|(\')([^\']*)\'|(#)(\w+)|(\$)(\w+(?:(?:\[(?:[^\[\]]+|(?R))*\])*|(?:\.\w+)*))|()([^\|\:,"\'\s]*?))(?=,|$)/', $match[2][$key], $mat);
@@ -526,7 +567,14 @@ class View
      */
     private static function parseSection($matches)
     {
-        $attribute = self::parseAttribute($matches[1], ['loop' => true, 'name' => true, 'item' => true, 'cols' => '1', 'skip' => '0', 'limit' => 'null']);
+        $attribute = self::parseAttribute($matches[1], [
+            'loop'  => true,
+            'name'  => true,
+            'item'  => true,
+            'cols'  => '1',
+            'skip'  => '0',
+            'limit' => 'null',
+        ]);
         if (!is_string($attribute['loop']))
             return $matches[0];
         $name = is_string($attribute['name']) ? $attribute['name'] : '$i';
@@ -591,6 +639,9 @@ class View
     {
         $args  = func_get_args();
         $value = array_shift($args);
+        if (is_bool($value)) {
+            $value = intval($value);
+        }
         if (!is_numeric($value)) {
             return $value;
         } elseif (isset($args[$value])) {
@@ -625,10 +676,30 @@ class View
             return '';
         $storage   = DI::Storage('template');
         $cachefile = 'parsetpl/' . md5($content . '_parseTpl') . '.php';
-        if ($storage->exist($cachefile)) {
+        if (!$storage->exist($cachefile)) {
             $content = self::compile($content);
             $storage->write($cachefile, $content);
         }
-        return $cachefile;
+        return $storage->getPath($cachefile);
+    }
+
+    public static function getTplConfig($key)
+    {
+        return Config::get('template.tplconfig')[basename(self::$_path)][$key]['value'] ?? '';
+    }
+
+    public static function getAd($key)
+    {
+        return "<script type=\"text/javascript\" src=\"/" . Config::get('ad.path', 'ad') . "/{$key}.js\"></script>";
+    }
+
+    public static function getSuffix()
+    {
+        return self::$suffix;
+    }
+
+    public static function setSuffix($suffix)
+    {
+        self::$suffix = $suffix;
     }
 }

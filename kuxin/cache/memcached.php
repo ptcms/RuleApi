@@ -25,11 +25,11 @@ class Memcached
             trigger_error('您尚未安装memcached扩展', E_USER_ERROR);
         }
         $this->handler = new \Memcached();
-        $this->handler->addServer($option['host'] ?? '127.0.0.1', $option['port']??'11211');
+        $this->handler->addServer($option['host'] ?? '127.0.0.1', $option['port'] ?? '11211');
         $this->prefix = $option['prefix'] ?? Config::get('cache.prefix', '');
     }
 
-    public function set(string $key, $value, int $time = 0)
+    public function set(string $key, $value, ?int $time = 0)
     {
         return $this->handler->set($this->prefix . $key, Serialize::encode($value), $time);
     }
@@ -57,7 +57,8 @@ class Memcached
         if ($this->handler->get($key)) {
             return $this->handler->increment($key, $num);
         }
-        return $this->handler->set($key, $num);
+        $this->handler->set($key, $num);
+        return $num;
     }
 
     public function dec(string $key, int $num = 1)
@@ -66,7 +67,8 @@ class Memcached
         if ($this->handler->get($key)) {
             return $this->handler->decrement($key, $num);
         } else {
-            return $this->handler->set($key, 0);
+            $this->handler->set($key, 0);
+            return 0;
         }
     }
 

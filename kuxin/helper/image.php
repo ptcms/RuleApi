@@ -10,7 +10,7 @@ namespace Kuxin\Helper;
  */
 class Image
 {
-    
+
     public $img;
     public $info;
     /* 水印相关常量定义 */
@@ -32,12 +32,12 @@ class Image
     const IMAGE_WATER_SOUTH = 8;
     //常量，标识右下角水印
     const IMAGE_WATER_SOUTHEAST = 9;
-    
+
     public function __construct($var)
     {
         if (stripos($var, 'http') === 0) {
             $content = Http::get($var);
-        } elseif (strlen($var)<100 && file_exists($var)) {
+        } elseif (strlen($var) < 100 && file_exists($var)) {
             $content = file_get_contents($var);
         } else {
             $content = (string)$var;
@@ -53,7 +53,7 @@ class Image
         $this->info['width']  = imagesx($this->img);
         $this->info['height'] = imagesy($this->img);
     }
-    
+
     /**
      * 返回图像宽度
      *
@@ -63,7 +63,7 @@ class Image
     {
         return $this->info['width'];
     }
-    
+
     /**
      * 返回图像高度
      *
@@ -73,7 +73,7 @@ class Image
     {
         return $this->info['height'];
     }
-    
+
     /**
      * 返回图像类型
      *
@@ -83,7 +83,7 @@ class Image
     {
         return $this->info['type'];
     }
-    
+
     /**
      * 返回图像MIME类型
      *
@@ -93,7 +93,7 @@ class Image
     {
         return $this->info['mime'];
     }
-    
+
     /**
      * 返回图像尺寸数组 0 - 图像宽度，1 - 图像高度
      *
@@ -106,13 +106,13 @@ class Image
 
     /**
      * 按宽度缩放
-     * @param int $width
+     * @param int  $width
      * @param bool $force 是否强制 如果小的不扩大
      * @return resource
      */
-    public function resizeByWidth(int $width,$force=false)
+    public function resizeByWidth(int $width, $force = false)
     {
-        if($force === false && $this->info['width']>$width){
+        if ($force === false && $this->info['width'] <= $width) {
             return $this->img;
         }
         $height = ceil($width * $this->info['height'] / $this->info['width']);
@@ -122,21 +122,21 @@ class Image
             // 调整默认颜色
             $color = imagecolorallocate($img, 255, 255, 255);
             imagefill($img, 0, 0, $color);
-            
+
             //裁剪
             imagecopyresampled($img, $this->img, 0, 0, 0, 0, $width, $height, $this->info['width'], $this->info['height']);
             //销毁原图
             imagedestroy($this->img);
-            
+
             //设置新图像
             $this->img = $img;
         } while (!empty($this->gif) && $this->gifNext());
-        
+
         $this->info['width']  = $width;
         $this->info['height'] = $height;
         return $this->img;
     }
-    
+
     public function thumb($width, $height)
     {
         //判断尺寸
@@ -176,7 +176,7 @@ class Image
             }
         }
     }
-    
+
     public function crop($w, $h, $x = 0, $y = 0)
     {
         //设置保存尺寸
@@ -193,19 +193,21 @@ class Image
             //设置新图像
             $this->img = $img;
         } while (!empty($this->gif) && $this->gifNext());
-        
+
         $this->info['width']  = $w;
         $this->info['height'] = $h;
         return $this->img;
     }
-    
+
     public function water($source, $posotion = Image::IMAGE_WATER_SOUTHEAST, $alpha = 60)
     {
         //资源检测
-        if (!is_file($source)) return false;
+        if (!is_file($source))
+            return false;
         //获取水印图像信息
         $info = getimagesize($source);
-        if ($info === false || $this->info['width'] < $info['0'] || $this->info['height'] < $info['1']) return false;
+        if ($info === false || $this->info['width'] < $info['0'] || $this->info['height'] < $info['1'])
+            return false;
         //创建水印图像资源
         $fun   = 'imagecreatefrom' . image_type_to_extension($info[2], false);
         $water = $fun($source);
@@ -217,54 +219,54 @@ class Image
                 $x = $this->info['width'] - $info[0];
                 $y = $this->info['height'] - $info[1];
                 break;
-            
+
             /* 左下角水印 */
             case Image::IMAGE_WATER_SOUTHWEST:
                 $x = 0;
                 $y = $this->info['height'] - $info[1];
                 break;
-            
+
             /* 左上角水印 */
             case Image::IMAGE_WATER_NORTHWEST:
                 $x = $y = 0;
                 break;
-            
+
             /* 右上角水印 */
             case Image::IMAGE_WATER_NORTHEAST:
                 $x = $this->info['width'] - $info[0];
                 $y = 0;
                 break;
-            
+
             /* 居中水印 */
             case Image::IMAGE_WATER_CENTER:
                 $x = ($this->info['width'] - $info[0]) / 2;
                 $y = ($this->info['height'] - $info[1]) / 2;
                 break;
-            
+
             /* 下居中水印 */
             case Image::IMAGE_WATER_SOUTH:
                 $x = ($this->info['width'] - $info[0]) / 2;
                 $y = $this->info['height'] - $info[1];
                 break;
-            
+
             /* 右居中水印 */
             case Image::IMAGE_WATER_EAST:
                 $x = $this->info['width'] - $info[0];
                 $y = ($this->info['height'] - $info[1]) / 2;
                 break;
-            
+
             /* 上居中水印 */
             case Image::IMAGE_WATER_NORTH:
                 $x = ($this->info['width'] - $info[0]) / 2;
                 $y = 0;
                 break;
-            
+
             /* 左居中水印 */
             case Image::IMAGE_WATER_WEST:
                 $x = 0;
                 $y = ($this->info['height'] - $info[1]) / 2;
                 break;
-            
+
             default:
                 /* 自定义水印坐标 */
                 if (is_array($posotion)) {
@@ -279,21 +281,21 @@ class Image
             // 调整默认颜色
             $color = imagecolorallocate($src, 255, 255, 255);
             imagefill($src, 0, 0, $color);
-            
+
             imagecopy($src, $this->img, 0, 0, $x, $y, $info[0], $info[1]);
             imagecopy($src, $water, 0, 0, 0, 0, $info[0], $info[1]);
             imagecopymerge($this->img, $src, $x, $y, 0, 0, $info[0], $info[1], $alpha);
-            
+
             //销毁零时图片资源
             imagedestroy($src);
-            
+
         } while (!empty($this->gif) && $this->gifNext());
-        
+
         //销毁水印资源
         imagedestroy($water);
         return true;
     }
-    
+
     /**
      * 图像添加文字
      *
@@ -311,21 +313,22 @@ class Image
     {
         //资源检测
         //if (!is_file($font)) return false;
-        if ($margin === '') $margin = ceil($size / 2);
+        if ($margin === '')
+            $margin = ceil($size / 2);
         //获取文字信息
-        
+
         $info = imagettfbbox($size, $angle, $font, $text);
         $minx = min($info[0], $info[2], $info[4], $info[6]);
         $maxx = max($info[0], $info[2], $info[4], $info[6]);
         $miny = min($info[1], $info[3], $info[5], $info[7]);
         $maxy = max($info[1], $info[3], $info[5], $info[7]);
-        
+
         /* 计算文字初始坐标和尺寸 */
         $x = $minx;
         $y = abs($miny);
         $w = $maxx - $minx;
         $h = $maxy - $miny;
-        
+
         /* 设定文字位置 */
         switch ($locate) {
             /* 右下角文字 */
@@ -333,56 +336,56 @@ class Image
                 $x += $this->info['width'] - $w - $margin;
                 $y += $this->info['height'] - $h - $margin;
                 break;
-            
+
             /* 左下角文字 */
             case Image::IMAGE_WATER_SOUTHWEST:
                 $x += $margin;
                 $y += $this->info['height'] - $h - $margin;
                 break;
-            
+
             /* 左上角文字 */
             case Image::IMAGE_WATER_NORTHWEST:
                 // 起始坐标即为左上角坐标，无需调整
                 $x += $margin;
                 $y += $margin;
                 break;
-            
+
             /* 右上角文字 */
             case Image::IMAGE_WATER_NORTHEAST:
                 $x += $this->info['width'] - $w - $margin;
                 $y += $margin;
                 break;
-            
+
             /* 居中文字 */
             case Image::IMAGE_WATER_CENTER:
                 $x += ($this->info['width'] - $w) / 2;
                 $y += ($this->info['height'] - $h) / 2;
                 break;
-            
+
             /* 下居中文字 */
             case Image::IMAGE_WATER_SOUTH:
                 $x += ($this->info['width'] - $w) / 2;
                 $y += $this->info['height'] - $h - $margin;
                 break;
-            
+
             /* 右居中文字 */
             case Image::IMAGE_WATER_EAST:
                 $x += $this->info['width'] - $w - $margin;
                 $y += ($this->info['height'] - $h) / 2;
                 break;
-            
+
             /* 上居中文字 */
             case Image::IMAGE_WATER_NORTH:
                 $x += ($this->info['width'] - $w) / 2;
                 $y += $margin;
                 break;
-            
+
             /* 左居中文字 */
             case Image::IMAGE_WATER_WEST:
                 $x += $margin;
                 $y += ($this->info['height'] - $h) / 2;
                 break;
-            
+
             default:
                 /* 自定义文字坐标 */
                 if (is_array($locate)) {
@@ -395,7 +398,7 @@ class Image
                     $y += $this->info['height'] - $h;
                 }
         }
-        
+
         /* 设置偏移量 */
         if (is_array($offset)) {
             $offset = array_map('intval', $offset);
@@ -404,7 +407,7 @@ class Image
             $offset = intval($offset);
             $ox     = $oy = $offset;
         }
-        
+
         /* 设置颜色 */
         if (is_string($color) && 0 === strpos($color, '#')) {
             $color = str_split(substr($color, 1), 2);
@@ -415,16 +418,16 @@ class Image
         } elseif (!is_array($color)) {
             return false;
         }
-        
+
         do {
             /* 写入文字 */
             $col = imagecolorallocatealpha($this->img, $color[0], $color[1], $color[2], $color[3]);
             imagettftext($this->img, $size, $angle, $x + $ox, $y + $oy, $col, $font, $text);
         } while (!empty($this->gif) && $this->gifNext());
-        
+
         return true;
     }
-    
+
     /**
      * 保存图像
      *
@@ -434,8 +437,9 @@ class Image
      */
     public function save($type = null, $interlace = true)
     {
-        if (empty($this->img)) return '';
-        
+        if (empty($this->img))
+            return '';
+
         //自动获取图像类型
         if (is_null($type)) {
             $type = $this->info['type'];
@@ -462,7 +466,7 @@ class Image
             return $content;
         }
     }
-    
+
     protected function gettype($content)
     {
         switch (substr($content, 0, 2)) {
@@ -477,10 +481,10 @@ class Image
                 break;
             default:
                 return 'jpeg';
-                exit('error image type ['.ord(substr($content, 0, 1)).' '.ord(substr($content, 1, 1)).']');
+                exit('error image type [' . ord(substr($content, 0, 1)) . ' ' . ord(substr($content, 1, 1)) . ']');
         }
     }
-    
+
     /* 切换到GIF的下一帧并保存当前帧，内部使用 */
     private function gifNext()
     {
@@ -488,10 +492,10 @@ class Image
         ob_implicit_flush(0);
         imagegif($this->img);
         $img = ob_get_clean();
-        
+
         $this->gif->image($img);
         $next = $this->gif->nextImage();
-        
+
         if ($next) {
             $this->img = imagecreatefromstring($next);
             return $next;
@@ -500,7 +504,7 @@ class Image
             return false;
         }
     }
-    
+
     /**
      * 析构方法，用于销毁图像资源
      */
@@ -513,21 +517,21 @@ class Image
 
 class Image_GIF
 {
-    
+
     /**
      * GIF帧列表
      *
      * @var array
      */
     private $frames = [];
-    
+
     /**
      * 每帧等待时间列表
      *
      * @var array
      */
     private $delays = [];
-    
+
     /**
      * 构造方法，用于解码GIF图片
      *
@@ -536,7 +540,7 @@ class Image_GIF
     public function __construct($src = null)
     {
         if (!is_null($src)) {
-            
+
             /* 解码GIF图片 */
             try {
                 $de           = new GIFDecoder($src);
@@ -547,7 +551,7 @@ class Image_GIF
             }
         }
     }
-    
+
     /**
      * 设置或获取当前帧的数据
      *
@@ -564,7 +568,7 @@ class Image_GIF
             return true;
         }
     }
-    
+
     /**
      * 将当前帧移动到下一帧
      *
@@ -574,7 +578,7 @@ class Image_GIF
     {
         return next($this->frames);
     }
-    
+
     /**
      * 编码并保存当前GIF图片
      *
@@ -585,7 +589,7 @@ class Image_GIF
         $gif = new GIFEncoder($this->frames, $this->delays, 0, 2, 0, 0, 0, 'bin');
         return $gif->GetAnimation();
     }
-    
+
 }
 
 
@@ -616,23 +620,23 @@ class Image_GIF
 
 Class GIFEncoder
 {
-    
+
     private $GIF = "GIF89a";        /* GIF header 6 bytes	*/
     private $VER = "GIFEncoder V2.05";    /* Encoder version		*/
-    
+
     private $BUF = [];
     private $LOP = 0;
     private $DIS = 2;
     private $COL = -1;
     private $IMG = -1;
-    
+
     private $ERR = [
         'ERR00' => "Does not supported function for only one image!",
         'ERR01' => "Source is not a GIF image!",
         'ERR02' => "Unintelligible flag ",
         'ERR03' => "Does not make animation from animated GIF source",
     ];
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -649,11 +653,11 @@ Class GIFEncoder
         $this->DIS = ($GIF_dis > -1) ? (($GIF_dis < 3) ? $GIF_dis : 3) : 2;
         $this->COL = ($GIF_red > -1 && $GIF_grn > -1 && $GIF_blu > -1) ?
             ($GIF_red | ($GIF_grn << 8) | ($GIF_blu << 16)) : -1;
-        
+
         for ($i = 0; $i < count($GIF_src); $i++) {
             if (strtolower($GIF_mod) == "url") {
                 $this->BUF [] = fread(fopen($GIF_src [$i], "rb"), filesize($GIF_src [$i]));
-            } else if (strtolower($GIF_mod) == "bin") {
+            } elseif (strtolower($GIF_mod) == "bin") {
                 $this->BUF [] = $GIF_src [$i];
             } else {
                 printf("%s: %s ( %s )!", $this->VER, $this->ERR ['ERR02'], $GIF_mod);
@@ -684,7 +688,7 @@ Class GIFEncoder
         $this->GIFAddFooter();
         return true;
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -693,16 +697,16 @@ Class GIFEncoder
     */
     private function GIFAddHeader()
     {
-        
+
         if (ord($this->BUF [0]{10}) & 0x80) {
             $cmap = 3 * (2 << (ord($this->BUF [0]{10}) & 0x07));
-            
+
             $this->GIF .= substr($this->BUF [0], 6, 7);
             $this->GIF .= substr($this->BUF [0], 13, $cmap);
             $this->GIF .= "!\377\13NETSCAPE2.0\3\1" . $this->GIFWord($this->LOP) . "\0";
         }
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -711,23 +715,23 @@ Class GIFEncoder
     */
     private function GIFAddFrames($i, $d)
     {
-        
+
         $Locals_str = 13 + 3 * (2 << (ord($this->BUF [$i]{10}) & 0x07));
-        
+
         $Locals_end = strlen($this->BUF [$i]) - $Locals_str - 1;
         $Locals_tmp = substr($this->BUF [$i], $Locals_str, $Locals_end);
-        
+
         $Global_len = 2 << (ord($this->BUF [0]{10}) & 0x07);
         $Locals_len = 2 << (ord($this->BUF [$i]{10}) & 0x07);
-        
+
         $Global_rgb = substr($this->BUF [0], 13,
             3 * (2 << (ord($this->BUF [0]{10}) & 0x07)));
         $Locals_rgb = substr($this->BUF [$i], 13,
             3 * (2 << (ord($this->BUF [$i]{10}) & 0x07)));
-        
+
         $Locals_ext = "!\xF9\x04" . chr(($this->DIS << 2) + 0) .
             chr(($d >> 0) & 0xFF) . chr(($d >> 8) & 0xFF) . "\x0\x0";
-        
+
         if ($this->COL > -1 && ord($this->BUF [$i]{10}) & 0x80) {
             for ($j = 0; $j < (2 << (ord($this->BUF [$i]{10}) & 0x07)); $j++) {
                 if (
@@ -778,7 +782,7 @@ Class GIFEncoder
         }
         $this->IMG = 1;
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -789,7 +793,7 @@ Class GIFEncoder
     {
         $this->GIF .= ";";
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -798,7 +802,7 @@ Class GIFEncoder
     */
     private function GIFBlockCompare($GlobalBlock, $LocalBlock, $Len)
     {
-        
+
         for ($i = 0; $i < $Len; $i++) {
             if (
                 $GlobalBlock{3 * $i + 0} != $LocalBlock{3 * $i + 0} ||
@@ -808,10 +812,10 @@ Class GIFEncoder
                 return (0);
             }
         }
-        
+
         return (1);
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -820,10 +824,10 @@ Class GIFEncoder
     */
     private function GIFWord($int)
     {
-        
+
         return (chr($int & 0xFF) . chr(($int >> 8) & 0xFF));
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -856,21 +860,21 @@ Class GIFEncoder
 
 Class GIFDecoder
 {
-    
+
     private $GIF_buffer = [];
     private $GIF_arrays = [];
     private $GIF_delays = [];
     private $GIF_stream = "";
     private $GIF_string = "";
     private $GIF_bfseek = 0;
-    
+
     private $GIF_screen = [];
     private $GIF_global = [];
     private $GIF_sorted;
     private $GIF_colorS;
     private $GIF_colorC;
     private $GIF_colorF;
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -880,16 +884,16 @@ Class GIFDecoder
     public function __construct($GIF_pointer)
     {
         $this->GIF_stream = $GIF_pointer;
-        
+
         $this->GIFGetByte(6);    // GIF89a
         $this->GIFGetByte(7);    // Logical Screen Descriptor
-        
+
         $this->GIF_screen = $this->GIF_buffer;
         $this->GIF_colorF = $this->GIF_buffer [4] & 0x80 ? 1 : 0;
         $this->GIF_sorted = $this->GIF_buffer [4] & 0x08 ? 1 : 0;
         $this->GIF_colorC = $this->GIF_buffer [4] & 0x07;
         $this->GIF_colorS = 2 << $this->GIF_colorC;
-        
+
         if ($this->GIF_colorF == 1) {
             $this->GIFGetByte(3 * $this->GIF_colorS);
             $this->GIF_global = $this->GIF_buffer;
@@ -937,7 +941,7 @@ Class GIFDecoder
             }
         }
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -965,7 +969,7 @@ Class GIFDecoder
             }
         }
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -1025,7 +1029,7 @@ Class GIFDecoder
     ::	GIFGetByte ( $len )
     ::
     */
-    
+
     /*
      *
      *  05.06.2007.
@@ -1047,7 +1051,7 @@ Class GIFDecoder
     private function GIFGetByte($len)
     {
         $this->GIF_buffer = [];
-        
+
         for ($i = 0; $i < $len; $i++) {
             if ($this->GIF_bfseek > strlen($this->GIF_stream)) {
                 return 0;
@@ -1056,7 +1060,7 @@ Class GIFDecoder
         }
         return 1;
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -1069,7 +1073,7 @@ Class GIFDecoder
             $this->GIF_string .= chr($bytes [$i]);
         }
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::
@@ -1083,7 +1087,7 @@ Class GIFDecoder
     {
         return ($this->GIF_arrays);
     }
-    
+
     /*
     :::::::::::::::::::::::::::::::::::::::::::::::::::
     ::

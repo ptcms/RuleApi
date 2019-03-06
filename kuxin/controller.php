@@ -16,14 +16,15 @@ namespace Kuxin;
  */
 class Controller
 {
+    public $disableActions = [];
 
-    /**
-     * return mixed
-     */
+    public function middleware()
+    {
+        return null;
+    }
+
     public function init()
     {
-        //do somethings
-        return null;
     }
 
     /**
@@ -48,5 +49,6 @@ class Controller
     public function redirect(string $url, $code = 302): void
     {
         Response::redirect($url, $code);
+        exit;
     }
 }

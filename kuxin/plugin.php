@@ -24,7 +24,7 @@ class Plugin
         if ($methods && is_array($methods)) {
             foreach ($methods as $method) {
                 $class = Loader::instance($method);
-                $param = $class->run($param);
+                $param = $class->handle($param);
             }
         }
         return $param;

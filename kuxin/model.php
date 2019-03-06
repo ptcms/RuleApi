@@ -18,7 +18,7 @@ class Model
      *
      * @var string
      */
-    protected $node = 'common';
+    protected $connection = 'common';
 
     /**
      * 数据表名
@@ -67,6 +67,10 @@ class Model
      */
     protected $db = null;
 
+
+    /**
+     * Model constructor.
+     */
     public function __construct()
     {
         $this->prefix = Config::get('database.prefix');
@@ -89,7 +93,7 @@ class Model
     public function db(): \Kuxin\Db\Mysql
     {
         if (!$this->db) {
-            $this->db = DI::DB($this->node);
+            $this->db = DI::DB($this->connection);
         }
         return $this->db;
     }
@@ -107,7 +111,7 @@ class Model
     public function sum(string $value): string
     {
         $this->data['field'] = "sum({$value}) as kx_num";
-        return $this->getField('kx_num');
+        return $this->getField('kx_num') ?: 0;
     }
 
     /**
@@ -135,20 +139,20 @@ class Model
      * @param string $value
      * @return string
      */
-    public function max(string $value): string
+    public function max(string $value)
     {
         $this->data['field'] = "max({$value}) as kx_num";
-        return $this->getField('kx_num');
+        return (int)$this->getField('kx_num');
     }
 
     /**
      * @param string $value
-     * @return string
+     * @return int
      */
-    public function count(string $value = '*'): string
+    public function count(string $value = '*'): int
     {
         $this->data['field'] = "count({$value}) as kx_num";
-        return $this->getField('kx_num');
+        return (int)$this->getField('kx_num');
     }
 
     /**
@@ -214,7 +218,7 @@ class Model
         return $this;
     }
 
-    public function page(string $value)
+    public function page($value)
     {
         $this->data['page'] = $value;
         return $this;
@@ -244,12 +248,12 @@ class Model
         return $this;
     }
 
-    public function join(string $table, $on = [], string $type = 'left')
+    public function join(string $table, string $on = '', string $type = 'left')
     {
         if (is_array($table)) {
-            $this->data['join'] = $table;
+            $this->data['join'][] = $table;
         } else {
-            $this->data['join'] = ['table' => $table, 'on' => $on, 'type' => $type];
+            $this->data['join'][] = ['table' => $table, 'on' => $on, 'type' => $type];
         }
         return $this;
     }
@@ -264,8 +268,13 @@ class Model
 
     public function getTableField(string $tablename)
     {
-        if (!$tablename) {
+        if (!($tablename = trim($tablename, ' '))) {
             trigger_error('您必须设置表名后才可以使用该方法');
+        }
+        if (($offset = stripos($tablename, ' as ')) !== false) {
+            $tablename = substr($tablename, 0, $offset);
+        } elseif (($offset = stripos($tablename, ' ')) !== false) {
+            $tablename = substr($tablename, 0, $offset);
         }
         return Registry::get('tablefield_' . $tablename, function () use ($tablename) {
             $fields = DI::Cache()->debugGet('tablefield_' . $tablename, function () use ($tablename) {
@@ -276,7 +285,7 @@ class Model
                             $pks[] = strtolower($v['Field']);
                         $fields[strtolower($v['Field'])] = strpos($v['Type'], 'int') !== false;
                     }
-                    DI::Cache()->set('tablefield_' . $tablename, $fields, Config::get('cache.time', 600));
+                    DI::Cache()->set('tablefield_' . $tablename, $fields);
                     return $fields;
                 } else {
                     trigger_error('获取表' . $tablename . '信息发生错误 ', E_USER_ERROR);
@@ -534,7 +543,7 @@ class Model
      */
     public function setInc(string $field, int $step = 1)
     {
-        return $this->setField($field, ['exp', "{$field} + {$step}"]);
+        return $this->setField($field, ['exp', "`{$field}` + {$step}"]);
     }
 
     /**
@@ -546,7 +555,7 @@ class Model
      */
     public function setDec(string $field, int $step = 1)
     {
-        return $this->setField($field, ['exp', "{$field} - {$step}"]);
+        return $this->setField($field, ['exp', "`{$field}` - {$step}"]);
     }
 
     public function getLastSql(): string
@@ -676,6 +685,9 @@ class Model
         $fields    = $this->getTableField($tablename);
         foreach ($condition as $var) {
             $k = key($var);
+            if (($offset = strpos($k, '.')) !== false) {
+                $k = substr($k, $offset + 1);
+            }
             $v = current($var);
             if (isset($fields[$k])) {
                 if (empty($this->data['join'])) {
@@ -689,7 +701,6 @@ class Model
                 $logic = ' ' . strtoupper($v) . ' ';
             } elseif ($k == '_string') {
                 $wheres[] = '(' . $v . ')';
-            } else {
             }
         }
         return ($wheres === []) ? 1 : implode(" {$logic} ", $wheres);
@@ -812,18 +823,20 @@ class Model
     {
         if (empty($this->data['join']))
             return '';
-        $table = $this->data['join']['table'];
-        $type  = $this->data['join']['type'];
-        $on    = $this->data['join']['on'];
-        if (empty($table)) {
-            return '';
-        } elseif (strpos($table, $this->prefix) === false) {
-            $table = $this->prefix . $table;
+        $str = '';
+        foreach ($this->data['join'] as $join) {
+            $table = $join['table'];
+            $type  = $join['type'];
+            $on    = $join['on'];
+            if (empty($table)) {
+                return '';
+            } elseif (strpos($table, $this->prefix) === false) {
+                $table = $this->prefix . $table;
+            }
+            $str .= ' ' . $type . ' JOIN ' . $table . ' ON ' . $on;
         }
-        if (empty($on)) {
-            $on = 'a.' . $this->pk . ' = b.id';
-        }
-        return ' ' . $type . ' JOIN ' . $table . ' as b ON ' . $on;
+
+        return $str;
     }
 
     protected function parseField()
@@ -869,5 +882,8 @@ class Model
     {
         $this->data       = [];
         $this->bindParams = [];
+        $this->attribute  = [];
     }
+
+
 }

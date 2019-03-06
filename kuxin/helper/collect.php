@@ -27,9 +27,9 @@ class Collect
             $data['rule'] .= (strpos($data['rule'], '?') ? '&_ptcms=' : '?_ptcms=') . (time() - 13456867);
         }
         if (isset($data['method']) && strtolower($data['method']) == 'post') {
-            $content = Http::post($data['rule'], $header, $option);
+            $content = Http::post($data['rule'], [], $header, $option);
         } else {
-            $content = Http::get($data['rule'], $header, $option);
+            $content = Http::get($data['rule'], [], $header, $option);
         }
         if ($content) {
             // 处理编码
@@ -160,11 +160,23 @@ class Collect
         $pregstr = '{' . $pregArr['rule'] . '}';
         $pregstr .= empty($pregArr['option']) ? '' : $pregArr['option'];
         preg_match($pregstr, $code, $match);
-        if (isset($match['1'])) {
+        $result = '';
+        if (strpos($pregstr, '|') && isset($match['2'])) {
+            array_shift($match);
+            foreach ($match as $result) {
+                if ($result) {
+                    break;
+                }
+            }
+        } elseif (isset($match['1'])) {
+            $result = $match['1'];
+        }
+
+        if ($result) {
             if (empty($pregArr['replace'])) {
-                return $match['1'];
+                return $result;
             } else {
-                return self::replace($match[1], $pregArr['replace']);
+                return self::replace($result, $pregArr['replace']);
             }
         }
         return '';

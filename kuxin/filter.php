@@ -19,10 +19,15 @@ class Filter
     protected static $validate = [
         //必填
         'require'    => '/.+/',
+        'required'   => '/.+/',
+        'string'     => '/.+/',
+        'str'        => '/.+/',
+        'mix'        => '/.+/',
+        'mixed'      => '/.+/',
         //邮箱
         'email'      => '/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/',
         //链接
-        'url'        => '/^http:\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+[\/=\?%\-&_~`@\[\]\':+!]*([^<>\"\"])*$/',
+        'url'        => '/^https?:\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+[\/=\?%\-&_~`@\[\]\':+!]*([^<>\"\"])*$/',
         //货币
         'currency'   => '/^\d+(\.\d+)?$/',
         //数字
@@ -30,13 +35,17 @@ class Filter
         //邮编
         'zip'        => '/^[0-9]\d{5}$/',
         //电话
-        'mobile'        => '/^1[\d]{10}$/',
+        'mobile'     => '/^1[\d]{10}$/',
         //整型
         'integer'    => '/^[-\+]?\d+$/',
+        'int'        => '/^[-\+]?\d+$/',
         //带小数点
         'double'     => '/^[-\+]?\d+(\.\d+)?$/',
+        'float'      => '/^[-\+]?\d+(\.\d+)?$/',
         //英文字母
         'english'    => '/^[a-zA-Z]+$/',
+        //
+        'key'        => '/^[\w\-\#]+$/',
         //中文汉字
         'chinese'    => '/^[\x{4e00}-\x{9fa5}]+$/u',
         //拼音
@@ -56,16 +65,41 @@ class Filter
      *
      * @param $value
      * @param $rule
-     * @return bool
+     * @return mixed
      */
-    public static function check($value, $rule): bool
+    public static function check($value, $rule)
     {
-        //指定值
-        if (is_array($rule)) {
-            return in_array($value,$rule);
-        } else {
-            return self::regex($value, $rule);
+        switch ($rule) {
+            case 'mixed':
+            case 'mix':
+                break;
+            case 'int':
+                $value = (int)$value;
+                break;
+            case 'float':
+                $value = (float)$value;
+                break;
+            case 'str':
+            case 'string':
+                $value = (string)$value;
+                break;
+            case 'arr':
+            case 'array':
+                $value = (array)$value;
+                break;
+            case 'time':
+                $value = strtotime($value) ? $value : '0';
+                break;
+            default:
+                if (is_array($rule)) {
+                    if (!in_array($value, $rule)) {
+                        $value = null;
+                    }
+                } elseif (false === Filter::regex($value, $rule)) {
+                    $value = null;
+                };
         }
+        return $value;
     }
 
 
@@ -78,12 +112,24 @@ class Filter
      */
     public static function regex($value, string $rule): bool
     {
-        // 检查是否有内置的正则表达式
-        $rule = strtolower($rule);
-        if (isset(self::$validate[$rule])) {
-            $rule = self::$validate[$rule];
+
+        if (strpos($rule, '|')) {
+            $rules = explode('|', $rule);
+        } else {
+            $rules = [$rule];
         }
-        return preg_match($rule, strval($value)) === 1;
+        foreach ($rules as $rule) {
+            if (in_array($rule, ['unique', 'ignore'])) {
+                continue;
+            }
+            if (isset(self::$validate[$rule])) {
+                $rule = self::$validate[$rule];
+            }
+            if (preg_match($rule, strval($value)) !== 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -94,8 +140,9 @@ class Filter
      */
     public static function safeWord(string $str): string
     {
-        if (strlen($str) == 0)
+        if (strlen($str) == 0) {
             return '';
+        }
         $str       = strip_tags($str);
         $badString = '~!@#$%^&*()+|=\\{}[];\'"/<>?';
         $length    = strlen($badString);
@@ -123,6 +170,8 @@ class Filter
         $text = preg_replace('/<\?|\?' . '>/', '', $text);
         //完全过滤js
         $text = preg_replace('/<script?.*\/script>/', '', $text);
+        $text = preg_replace('/\&#\d+;/', '', $text);
+        $text = preg_replace('/\&#\w{4}/', '', $text);
 
         $text = str_replace('[', '&#091;', $text);
         $text = str_replace(']', '&#093;', $text);
@@ -166,5 +215,16 @@ class Filter
         //过滤多余空格
         $text = str_replace('  ', ' ', $text);
         return $text;
+    }
+
+    /**
+     * 深度过滤 去掉url
+     * @param $text
+     * @return string|string[]|null
+     */
+    public static function clearUrl($text)
+    {
+        $text = self::safetext($text);
+        return $text = preg_replace(self::$validate['ur;'], '', $text);
     }
 }

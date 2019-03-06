@@ -50,22 +50,24 @@ class Memcache
         return $this->handler->delete($this->prefix . $key);
     }
 
-    public function inc(string $key, int $num = 1)
+    public function inc(string $key, ?int $num = 1)
     {
         $key = $this->prefix . $key;
         if ($this->handler->get($key)) {
             return $this->handler->increment($key, $num);
         }
-        return $this->handler->set($key, $num);
+        $this->handler->set($key, $num);
+        return $num;
     }
 
-    public function dec(string $key, int $num = 1)
+    public function dec(string $key, ?int $num = 1)
     {
         $key = $this->prefix . $key;
         if ($this->handler->get($key)) {
             return $this->handler->decrement($key, $num);
         } else {
-            return $this->handler->set($key, 0);
+            $this->handler->set($key, 0);
+            return 0;
         }
     }
 

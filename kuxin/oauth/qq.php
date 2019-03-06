@@ -2,6 +2,7 @@
 namespace Kuxin\Oauth;
 
 use Kuxin\Helper\Http;
+use Kuxin\Helper\Json;
 
 class Qq extends Oauth{
     
@@ -62,7 +63,7 @@ class Qq extends Oauth{
         );
         $params = array_merge($params, $param);
         $data = Http::get($this->apiBase . $api, $params);
-        return json_decode($data, true);
+        return Json::decode($data, true);
     }
     
     /**
@@ -95,7 +96,7 @@ class Qq extends Oauth{
     public function getOpenId() {
         if ($this->openid) return $this->openid;
         $data = http::get($this->apiBase . 'oauth2.0/me', array('access_token' => $this->token));
-        $data = json_decode(trim(substr($data, 9), " );\n"), true);
+        $data = Json::decode(trim(substr($data, 9), " );\n"), true);
         if (isset($data['openid'])) {
             $this->openid = $data['openid'];
             return $data['openid'];

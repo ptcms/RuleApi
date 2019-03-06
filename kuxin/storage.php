@@ -28,7 +28,7 @@ class Storage
     }
 
     /**
-     * @param $file
+     * @param string $file
      * @return bool
      */
     public function exist(string $file)
@@ -46,8 +46,8 @@ class Storage
     }
 
     /**
-     * @param $file
-     * @param $content
+     * @param string $file
+     * @param string $content
      * @return bool|int
      */
     public function write(string $file, string $content)
@@ -107,5 +107,13 @@ class Storage
     public function error()
     {
         return $this->handler->error();
+    }
+
+    /**
+     * @return string
+     */
+    public function flush()
+    {
+        return $this->handler->flush();
     }
 }

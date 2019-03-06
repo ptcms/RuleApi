@@ -15,7 +15,7 @@ use Kuxin\Router;
  */
 class Url
 {
-    
+
     /**
      * 获取微信用的当前URL 去掉#后面的内容
      *
@@ -29,7 +29,7 @@ class Url
         }
         return $url;
     }
-    
+
     /**
      * 获取当前地址
      *
@@ -46,12 +46,12 @@ class Url
         $protocol = (!empty($_SERVER['HTTPS'])
             && $_SERVER['HTTPS'] !== 'off'
             || $_SERVER['SERVER_PORT'] === 443) ? 'https://' : 'http://';
-        
+
         $host = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : $_SERVER['HTTP_HOST'];
         $uri  = isset($_SERVER['HTTP_X_REAL_URI']) ? $_SERVER['HTTP_X_REAL_URI'] : $_SERVER['REQUEST_URI'];
         return $protocol . $host . $uri;
     }
-    
+
     /**
      * 生成url
      *
@@ -63,43 +63,76 @@ class Url
      */
     public static function build($method = '', $args = [], $type = 'html', $ignores = [])
     {
-        static $rules = null, $_method = [], $power = false;
-        if ($rules === null) {
-            $rules = Config::get('rewrite.url_rules');
-            $power = Config::get('rewrite.power', false);
-            
+        if (!empty($_REQUEST['template'])){
+            $args['template'] = $_REQUEST['template'];
         }
-        //忽视args中的部分参数
-        if (!empty($ignores)) {
-            foreach ($ignores as $key => $var) {
-                if (isset($args[$key]) && $args[$key] == $var) unset($args[$key]);
+        static $rules = null, $_method = [], $power = false, $default_data = [], $ignore_params = [], $auto_calc = [];
+        if ($rules === null) {
+            $rules         = Config::get('rewrite.rules');
+            $power         = Config::get('rewrite.power', false);
+            $default_data  = Config::get('url.default_data', []);
+            $ignore_params = Config::get('url.ignore_param', []);
+            $auto_calc     = Config::get('url.auto_calc', []);
+        }
+        $ignores = array_merge($ignores, $ignore_params);
+
+        foreach ($args as $oarg_k => $oarg_v) {
+            if ((isset($default_data[$oarg_k]) && $default_data[$oarg_k] == $oarg_v)) {
+                unset($args[$oarg_k]);
             }
         }
         if (empty($_method[$method])) {
             if ($method === '') {
-                $_method[$method] = strtolower(Router::$controller . '.' . Router::$action);
+                $_method[$method] = strtolower(str_replace('\\', '.', Router::$controller) . '.' . Router::$action);
             } elseif (substr_count($method, '.') == 0) {
-                $_method[$method] = strtolower(Router::$controller . '.' . $method);
+                $_method[$method] = strtolower(str_replace('\\', '.', Router::$controller) . '.' . $method);
             } else {
                 $_method[$method] = strtolower($method);
             }
         }
         $method = $_method[$method];
         if ($power && isset($rules[$method])) {
-            $keys  = [];
-            $rule  = $rules[$method];
+            foreach ($auto_calc as $key => $var) {
+                if (isset($args[$key])) {
+                    foreach ($var as $item) {
+                        $args[$item['name']] = $item['func']($args[$key]);
+                    }
+                }
+            }
+            $keys = [];
+            $rule = $rules[$method];
             $oargs = $args;
             foreach ($args as $key => &$arg) {
                 $keys[] = '{' . $key . '}';
                 $arg    = rawurlencode(urldecode($arg));
-                if (strpos($rule, '{' . $key . '}')) unset($oargs[$key]);
+                if (strpos($rule, '{' . $key . '}')) {
+                    unset($oargs[$key]);
+                }
             }
             $url = self::clearUrl(str_replace($keys, $args, $rule));
             if (strpos($url, ']')) {
                 $url = strtr($url, ['[' => '', ']' => '']);
             }
-            if (strpos($url, '{page}')) $url = str_replace('{page}', 1, $url);
-            return '/' . $url;
+            if (strpos($url, '{')) {
+                foreach ($default_data as $default_k => $default_v) {
+                    if (strpos($url, '{' . $default_k . '}')) {
+                        $url = str_replace('{' . $default_k . '}', $default_v, $url);
+                    }
+                }
+            }
+            if (!empty($oargs) && $ignores) {
+                foreach ($oargs as $oarg_k => $oarg_v) {
+                    if (in_array($oarg_k, $ignores)) {
+                        unset($oargs[$oarg_k]);
+                    }
+                }
+            }
+            $url = (substr($url, 0, 1) == '/' ? '' : '/') . $url;
+            if (empty($oargs)) {
+                return $url;
+            } else {
+                return $url . (strpos($url, '?') ? '&' : '?') . http_build_query($oargs);
+            }
         } else {
             $type = $type ? $type : Response::getType();
             $url  = '/' . strtr($method, '.', '/') . '.' . $type;
@@ -109,7 +142,7 @@ class Url
             return $url;
         }
     }
-    
+
     /**
      * 清除url中可选参数
      *

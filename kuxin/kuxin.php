@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Kuxin;
 
@@ -22,14 +22,14 @@ class Kuxin
     public static function init(): void
     {
         // 注册AUTOLOAD方法
-        spl_autoload_register([__CLASS__, 'autoload']);
+        spl_autoload_register([Loader::class, 'autoload']);
         //程序关闭
         register_shutdown_function([__CLASS__, 'shutdown']);
         // 设定错误和异常处理
         set_error_handler([__CLASS__, 'error']);
         set_exception_handler([__CLASS__, 'exception']);
         // 注册配置
-        Config::register(Loader::import(KX_ROOT . '/app/config/kuxin.php'));
+        Config::LoadDir(KX_ROOT . '/app/config');
         // 时区
         date_default_timezone_set('PRC');
         // 记录开始运行时间
@@ -57,9 +57,12 @@ class Kuxin
         } else {
             ini_set('display_errors', 'off');
             error_reporting(0);
-            ini_set('display_errors', 'on');
-            error_reporting(E_ALL);
         }
+
+        // 加载助手文件
+        Loader::import(KX_ROOT . '/app/helper.php');
+        // 加载版本文件
+        Loader::import(KX_ROOT . '/app/version.php');
     }
 
     /**
@@ -72,23 +75,40 @@ class Kuxin
         if (PHP_SAPI == 'cli') {
             Router::cli();
             global $argv;
-            $className = 'App\\Console\\' . Router::$controller;
+            //系统console和用户的走不同的位置
+            if (in_array(Router::$controller, Router::$selfConsoleClass)) {
+                $controllerName = 'Kuxin\\Console\\' . Router::$controller;
+            } else {
+                $controllerName = 'App\\Console\\' . Router::$controller;
+            }
             unset($argv[0], $argv[1]);
-            $controller = Loader::instance($className, $argv);
+            $controller = Loader::instance($controllerName, $argv);
+            if (!$controller) {
+                trigger_error('控制器[' . $controllerName . ']不存在', E_USER_ERROR);
+            }
             $actionName = Router::$action;
             $controller->init();
-            if (method_exists($controller, $actionName)) {
+            if (is_callable([$controller, $actionName])) {
                 $controller->$actionName();
+            } else {
+                trigger_error('控制器[' . $controllerName . ']对应的方法[' . $actionName . ']不存在', E_USER_ERROR);
             }
         } else {
             Router::dispatcher();
             $controllerName = 'App\\Controller\\' . Router::$controller;
             /** @var \Kuxin\Controller $controller */
             $controller = Loader::instance($controllerName);
+            if (!$controller) {
+                trigger_error('控制器[' . $controllerName . ']不存在', E_USER_ERROR);
+            }
             $actionName = Router::$action;
-            $return     = $controller->init();
+            $return     = $controller->middleware();
             if ($return === null) {
-                if (method_exists($controller, $actionName)) {
+                if (is_callable([$controller, $actionName])) {
+                    $controller->init();
+                    if (in_array($actionName, $controller->disableActions)) {
+                        trigger_error('控制器[' . $controllerName . ']对应的方法[' . $actionName . ']不允许访问', E_USER_ERROR);
+                    }
                     $return = $controller->$actionName();
                 } else {
                     trigger_error('控制器[' . $controllerName . ']对应的方法[' . $actionName . ']不存在', E_USER_ERROR);
@@ -134,15 +154,6 @@ class Kuxin
         if (Config::get('log.power')) {
             Log::build();
         }
-    }
-
-    /**
-     * @param $classname
-     */
-    protected static function autoload($classname): void
-    {
-        $file = KX_ROOT . '/' . strtr(strtolower($classname), '\\', '/') . '.php';
-        Loader::import($file);
     }
 
     /**

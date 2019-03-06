@@ -54,7 +54,41 @@ class Request
         }
         // 脑残法，判断手机发送的客户端标志,兼容性有待提高
         if (isset ($_SERVER['HTTP_USER_AGENT'])) {
-            $clientkeywords = ['nokia', 'sony', 'ericsson', 'mot', 'samsung', 'htc', 'sgh', 'lg', 'sharp', 'sie-', 'philips', 'panasonic', 'alcatel', 'lenovo', 'iphone', 'ipod', 'blackberry', 'meizu', 'android', 'netfront', 'symbian', 'ucweb', 'windowsce', 'palm', 'operamini', 'operamobi', 'openwave', 'nexusone', 'cldc', 'midp', 'wap', 'mobile', 'UCBrowser'];
+            $clientkeywords = [
+                'nokia',
+                'sony',
+                'ericsson',
+                'mot',
+                'samsung',
+                'htc',
+                'sgh',
+                'lg',
+                'sharp',
+                'sie-',
+                'philips',
+                'panasonic',
+                'alcatel',
+                'lenovo',
+                'iphone',
+                'ipod',
+                'blackberry',
+                'meizu',
+                'android',
+                'netfront',
+                'symbian',
+                'ucweb',
+                'windowsce',
+                'palm',
+                'operamini',
+                'operamobi',
+                'openwave',
+                'nexusone',
+                'cldc',
+                'midp',
+                'wap',
+                'mobile',
+                'UCBrowser',
+            ];
             // 从HTTP_USER_AGENT中查找手机浏览器的关键字
             if (preg_match("/(" . implode('|', $clientkeywords) . ")/i", strtolower($_SERVER['HTTP_USER_AGENT']))) {
                 return true;
@@ -68,9 +102,6 @@ class Request
                 return true;
             }
         }
-        if ($_SERVER['HTTP_HOST'] == parse_url(Config::get('wap_domain'), PHP_URL_HOST)) {
-            return true;
-        }
         return false;
     }
 
@@ -81,8 +112,8 @@ class Request
     public static function isSpider($ua = ''): bool
     {
         empty($ua) && $ua = $_SERVER['HTTP_USER_AGENT'];
-        $ua      = strtolower($ua);
-        $spiders = ['bot', 'crawl', 'spider', 'slurp', 'sohu-search', 'lycos', 'robozilla'];
+        $ua = strtolower($ua);
+        $spiders = [ 'bot', 'crawl', 'spider', 'slurp', 'sohu-search', 'lycos', 'robozilla' ];
         foreach ($spiders as $spider) {
             if (false !== strpos($ua, $spider))
                 return true;
@@ -100,7 +131,7 @@ class Request
         $i  = explode('.', $ip);
         if ($i[0] == 10 || ($i[0] == 172 && $i[1] > 15 && $i[1] < 32) || ($i[0] == 192 && $i[1] == 168)) {
             //如果是内网ip重新获取
-            $keys = ['HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'HTTP_X_REAL_IP'];
+            $keys = [ 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'HTTP_X_REAL_IP' ];
             foreach ($keys as $key) {
                 if (empty($_SERVER[$key]))
                     continue;
@@ -115,4 +146,5 @@ class Request
         }
         return $defaultIp;
     }
+
 }

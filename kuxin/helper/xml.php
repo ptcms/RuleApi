@@ -82,7 +82,7 @@ class Xml
         } else {
             $con = simplexml_load_file($con, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
         }
-        return json_decode(json_encode($con), true);
+        return Json::decode(Json::encode($con), true);
     }
     
 }

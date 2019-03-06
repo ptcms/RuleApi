@@ -3,6 +3,7 @@
 namespace Kuxin\Oauth;
 
 use Kuxin\Helper\Http;
+use Kuxin\Helper\Json;
 
 class Weixin extends Oauth{
     /**
@@ -77,7 +78,7 @@ class Weixin extends Oauth{
         ];
         $params = array_merge($params, $param);
         $data   = Http::get($this->apiBase . $api, $params);
-        return json_decode($data, true);
+        return Json::decode($data, true);
     }
     
     /**
@@ -89,7 +90,7 @@ class Weixin extends Oauth{
      */
     protected function parseToken($result)
     {
-        $data = json_decode($result, true);
+        $data = Json::decode($result, true);
         if (isset($data['access_token'])) {
             $this->token  = $data['access_token'];
             $this->openid = $data['openid'];

@@ -19,7 +19,7 @@ class Response
     /**
      * @var array
      */
-    protected static $types = ['html', 'json', 'xml', 'jsonp'];
+    protected static $types = ['html', 'json', 'xml', 'jsonp', 'png', 'gif', 'jpg', 'jpeg'];
 
     /**
      * @var bool
@@ -65,6 +65,13 @@ class Response
                 return 'text/xml';
             case 'html':
                 return 'text/html';
+            case 'png':
+                return 'image/png';
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpg';
+            case 'gif':
+                return 'image/gif';
             default:
                 return 'text/html';
         }
@@ -78,13 +85,17 @@ class Response
         if (!headers_sent()) {
             //设置系统的输出字符为utf-8
             header("Content-Type: " . self::getMime() . "; charset=utf-8");
+            if(self::getType()=='html'){
+                //支持页面回跳
+                header("Cache-control: private");
+            }
             //版权标识
             header("X-Powered-By: PTcms Studio (www.ptcms.com)");
-            // 跨域
-            if (self::$type == 'json') {
-                header('Access-Control-Allow-Origin:*');
-                header('Access-Control-Allow-Headers:accept, content-type');
-            }
+            // 跨域 暂时不做统一处理
+            // if (self::$type == 'json') {
+            //     header('Access-Control-Allow-Origin:*');
+            //     header('Access-Control-Allow-Headers:accept, content-type');
+            // }
         }
     }
 
@@ -201,7 +212,7 @@ class Response
      * @param        $name
      * @param string $type
      */
-    public function download(string $con, string $name, $type = 'str')
+    public static function download(string $con, string $name, $type = 'str')
     {
         $length = ($type == 'file') ? filesize($con) : strlen($con);
         header("Content-type: application/octet-stream");
@@ -245,20 +256,26 @@ class Response
                 $color = $type;
         }
         $line = $line ? '<br/>' . PHP_EOL : '';
+        $text = nl2br($text);
         if ($color) {
             echo "<span style='color:{$color}'>{$text}</span>{$line}";
         } else {
             echo "<span>{$text}</span>{$line}";
         }
+        if (Config::get('app.fastcgi_buffer_fill')) {
+            echo str_repeat(' ', 1024 * Config::get('app.fastcgi_buffer_size', 128));
+        }
+        ob_flush();
+        flush();
     }
 
 
     /**
      * 终端输出
      *
-     * @param $text
-     * @param $type
-     * @param $line
+     * @param string $text
+     * @param string $type
+     * @param bool   $line
      * @return mixed
      */
     public static function terminal(string $text, string $type, $line = true)
@@ -293,7 +310,15 @@ class Response
     public static function error(string $message, string $file, int $line)
     {
         if (Config::get('app.mode') == 'cli') {
-            exit($message . '[' . $file . ':' . $line . ']');
+            debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+            echo PHP_EOL;
+            $debug  = debug_backtrace();
+            $traces = end($debug);
+            if (isset($traces['args']['0']->xdebug_message)) {
+                exit(PHP_EOL . trim($traces['args']['0']->xdebug_message) . PHP_EOL);
+            } else {
+                exit($message . '[' . $file . ':' . $line . ']' . PHP_EOL);
+            }
         } else {
             if (Config::get('app.debug')) {
                 $e['message'] = $message;
@@ -304,10 +329,10 @@ class Response
                 //                header('HTTP/1.1 404 Not Found');
                 //                header("status: 404 Not Found");
                 Log::record(sprintf("%s [%s:%s]", $message, $file, $line));
-                $file = KX_ROOT . '/404.html';
+                $file = KX_ROOT . '/error.html';
                 if (is_file($file)) {
                     $content = file_get_contents($file);
-                    $content = str_replace(['{$sitename}', '{$siteurl}', '{$msg}'], [Config::get('sitename'), Config::get('siteurl'), $message], $content);
+                    $content = str_replace(['{$sitename}', '{$siteurl}', '{$msg}', '{$tongji}'], [Config::get('sitename'), Config::get('siteurl'), $message, Config::get('tongji.pc')], $content);
                 } else {
                     $content = '页面出现错误';
                 }
@@ -325,5 +350,13 @@ class Response
         echo '<pre>';
         print_r($arr);
         echo '</pre>', PHP_EOL;
+    }
+
+    public static function nocache()
+    {
+        header('Expires: Thu, 01 Jan 1970 00:00:01 GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s').' GMT');
+        header('Cache-Control: no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
     }
 }

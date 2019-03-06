@@ -23,6 +23,10 @@ class Console
      */
     public function __construct()
     {
+        if((int)ini_get('memory_limit')<1024){
+            ini_set('memory_limit','1024M');
+        }
+        set_time_limit(0);
         $this->params = Registry::get('cli_params', []);
     }
 
@@ -42,10 +46,53 @@ class Console
      * @param $line
      * @return mixed
      */
-    public function info(string $text, string $status = 'text', bool $line = true): void
+    public function show(string $text, string $status = 'text', bool $line = true): void
     {
         printf(Response::terminal($text, $status, $line));
     }
+
+    /**
+     * 终端输出
+     *
+     * @param string $text
+     * @param bool $line
+     * @return mixed
+     */
+    public function info(string $text, bool $line = true): void
+    {
+        printf(Response::terminal($text, 'info', $line));
+    }
+
+    /**
+     * @param string $text
+     * @param bool $line
+     * @return mixed
+     */
+    public function success(string $text, bool $line = true): void
+    {
+        printf(Response::terminal($text, 'success', $line));
+    }
+
+    /**
+     * @param string $text
+     * @param bool $line
+     * @return mixed
+     */
+    public function warning(string $text, bool $line = true): void
+    {
+        printf(Response::terminal($text, 'success', $line));
+    }
+
+    /**
+     * @param string $text
+     * @param bool $line
+     * @return mixed
+     */
+    public function error(string $text, bool $line = true): void
+    {
+        printf(Response::terminal($text, 'error', $line));
+    }
+
 
     /**
      * 获取参数

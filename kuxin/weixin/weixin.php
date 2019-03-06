@@ -4,6 +4,7 @@ namespace Kuxin\Weixin;
 use Kuxin\Config;
 use Kuxin\DI;
 use Kuxin\Helper\Http;
+use Kuxin\Helper\Json;
 use Kuxin\Loader;
 
 class Weixin
@@ -83,7 +84,7 @@ class Weixin
     protected function parseJSON($data)
     {
         if ($data{0} == '{') {
-            return json_decode($data, true);
+            return Json::decode($data, true);
         } else {
             return null;
         }

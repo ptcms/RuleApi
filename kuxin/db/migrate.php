@@ -9,11 +9,37 @@ use Kuxin\DI;
 class Migrate
 {
 
-    protected $db = 'common';
+    /** @var Mysql $db */
+    protected $db;
 
-    protected $comands = [];
+    public function __construct($db = 'common')
+    {
+        $this->setDb($db);
+    }
 
-    public function create(string $table, Closure $func, $engine = null)
+    /**
+     * @param null $db
+     * @throws \Exception
+     */
+    public function setDb($db): void
+    {
+        if (is_string($db)) {
+            $this->db = DI::DB($db);
+        } else if ($db instanceof Mysql) {
+            $this->db = $db;
+        } else {
+            throw new \Exception('param $db error');
+        }
+    }
+
+    /**
+     * @param string $table
+     * @param \Closure $func
+     * @param string $engine
+     * @return bool
+     * @throws \Exception
+     */
+    public function create(string $table, Closure $func, $engine = 'innodb')
     {
         if (!$table) {
             return false;
@@ -21,16 +47,22 @@ class Migrate
         //执行回调函数
         $func();
 
-        $field  = $this->combineCommand();
+        $field = $this->combineCommand();
 
-        $engine = $engine ?: Config::get('database.engine');
+        $engine = $engine ?: Config::get('database.engine', 'innodb');
 
         if ($field) {
-            $sql = "CREATE TABLE `{$table}` ({$field}) ENGINE={$engine} DEFAULT CHARSET=utf8;";
+            $sql = "CREATE TABLE IF NOT EXISTS `{$table}` ({$field})  ENGINE={$engine} DEFAULT CHARSET=utf8;";
             return $this->executeSql($sql);
         }
     }
 
+    /**
+     * @param string $table
+     * @param \Closure $func
+     * @return bool
+     * @throws \Exception
+     */
     public function alter(string $table, Closure $func)
     {
         if (!$table) {
@@ -47,12 +79,17 @@ class Migrate
     }
 
 
+    /**
+     * @param string $table
+     * @return bool
+     * @throws \Exception
+     */
     public function drop(string $table)
     {
         if (!$table) {
             return false;
         }
-        $sql = "DROP TABLE {$table}";
+        $sql = "DROP TABLE IF EXISTS {$table}";
         return $this->executeSql($sql);
     }
 
@@ -71,13 +108,31 @@ class Migrate
         return $command;
     }
 
+    /**
+     * @param string $sql
+     * @return bool
+     * @throws \Exception
+     */
     protected function executeSql(string $sql)
     {
-        $db = DI::DB($this->db);
-        if ($db->execute($sql)) {
+        if ($this->db->execute($sql)) {
             return true;
         } else {
-            throw new \Exception($db->errorInfo());
+            throw new \Exception($this->db->errorInfo() . PHP_EOL . $this->db->getRealSql($sql));
+        }
+    }
+
+    /**
+     * @param string $sql
+     * @return array
+     * @throws \Exception
+     */
+    protected function fetchAll(string $sql)
+    {
+        if (($records = $this->db->fetchAll($sql)) !== false){
+            return $records;
+        }else{
+            throw new \Exception($this->db->errorInfo() . PHP_EOL . $this->db->getRealSql($sql));
         }
     }
 }

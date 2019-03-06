@@ -14,6 +14,7 @@ use Kuxin\Log;
 class Http
 {
 
+
     /**
      * @param        $url
      * @param array  $params
@@ -25,8 +26,8 @@ class Http
     public static function curl($url, $params = [], $method = 'GET', $header = [], $option = [])
     {
         $opts = [
-            CURLOPT_TIMEOUT        => Config::get('http.timeout', 6),
-            CURLOPT_CONNECTTIMEOUT => Config::get('http.timeout', 6),
+            CURLOPT_TIMEOUT        => Config::get('http.timeout', 15),
+            CURLOPT_CONNECTTIMEOUT => Config::get('http.timeout', 15),
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_FOLLOWLOCATION => 1,
             CURLOPT_HEADER         => 0,
@@ -34,7 +35,7 @@ class Http
             //CURLOPT_FRESH_CONNECT  => false,
             //CURLOPT_MAXREDIRS      => 5,
             CURLOPT_USERAGENT      => Config::get('http.user_agent', 'PTCMS Framework Http Client'),
-            CURLOPT_REFERER        => $url,
+            CURLOPT_REFERER        => isset($header['referer']) ? $header['referer'] : $url,
             CURLOPT_NOSIGNAL       => 1,
             CURLOPT_ENCODING       => 'gzip, deflate',
             CURLOPT_SSL_VERIFYPEER => false,
@@ -45,11 +46,9 @@ class Http
             $opts[CURLOPT_PROXY]     = Config::get('http.proxy.host');
             $opts[CURLOPT_PROXYPORT] = Config::get('http.proxy.port');
             $opts[CURLOPT_PROXYTYPE] = Config::get('http.proxy.type');
-        }
-
-        if (isset($header['referer'])) {
-            $opts[CURLOPT_REFERER] = $header['referer'];
-            unset($header['referer']);
+            if (!empty($user = Config::get('http.proxy.username')) && !empty($pwd = Config::get('http.proxy.password'))) {
+                $opts[CURLOPT_PROXYUSERPWD] = "{$user}:{$pwd}";
+            }
         }
 
         if (isset($header['cookie'])) {
@@ -80,6 +79,17 @@ class Http
         /* 根据请求类型设置特定参数 */
         switch (strtoupper($method)) {
             case 'GET':
+                if ($params) {
+                    if (is_array($params)) {
+                        $params = http_build_query($params);
+                    }
+                    if (strpos($url, '?')) {
+                        $url .= '&' . $params;
+                    } else {
+                        $url .= '?' . $params;
+                    }
+                    $opts[CURLOPT_URL] = $url;
+                }
                 break;
             case 'POST':
                 //判断是否传输文件
@@ -109,9 +119,9 @@ class Http
         $error = curl_error($ch);
         $errno = curl_errno($ch);
         curl_close($ch);
-        if ($error) {
+        if ($error && $errno !== 28) {
             if (Config::get('app.debug')) {
-                trigger_error('Curl获取远程内容错误！原因：' . $error . ' 地址：' . $url,E_USER_ERROR);
+                trigger_error('Curl获取远程内容错误！原因：' . $error . ' 地址：' . $url);
             } else {
                 Log::record('Curl获取远程内容错误！原因：' . $error . ' 地址：' . $url);
             }
@@ -120,26 +130,24 @@ class Http
         return $data;
     }
 
+    public static function get($url, $data = [], $header = [], $option = [])
+    {
+        return self::curl($url, $data, 'GET', $header, $option);
+    }
+
     public static function post($url, $data = [], $header = [], $option = [])
     {
         return self::curl($url, $data, 'POST', $header, $option);
     }
 
-
-    public static function get($url, $data = [], $header = [], $option = [])
+    public static function getJson($url, $data = [])
     {
-        if (is_array($data)) {
-            $data = http_build_query($data);
-        }
-        if ($data) {
-            if (strpos($url, '?')) {
-                $url .= '&' . $data;
-            } else {
-                $url .= '?' . $data;
-            }
-            $data = [];
-        }
-        return self::curl($url, $data, 'GET', $header, $option);
+        return Json::decode(trim(self::curl($url, $data, 'GET')));
+    }
+
+    public static function postJson($url, $data = [], $header = [])
+    {
+        return Json::decode(trim(self::curl($url, $data, 'POST', $header)));
     }
 
     /**

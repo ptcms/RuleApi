@@ -14,15 +14,18 @@ class Router
     static $controller = 'index';
     static $action = 'index';
 
+    static $selfConsoleClass = [
+        'migrate',
+    ];
+
     /**
      * 解析controller和action
      */
     public static function dispatcher(): void
     {
-
         //解析s变量
         if (isset($_GET['s'])) {
-            $superVar = $_GET['s'];
+            $superVar = rtrim($_GET['s'], '/');
             //判断是否需要进行rewrite转换
             if (Config::get('rewrite.power')) {
                 $superVar = self::rewrite($superVar);
@@ -30,18 +33,21 @@ class Router
             if (strpos($superVar, '/')) {
                 if (strpos($superVar, '.')) {
                     $param = explode('.', $superVar, 2);
-                    Response::setType($param['1']);
+                    if (!Request::isAjax()) {
+                        Response::setType($param['1']);
+                    }
                     $param = explode('/', $param['0']);
                 } else {
                     $param = explode('/', $superVar);
                 }
-                self::$action     = array_pop($param);
-                self::$controller = implode('\\', $param);
-            }else{
-                self::$controller = $superVar;
+                self::$action     = strtolower(array_pop($param));
+                self::$controller = strtolower(implode('\\', $param));
+            } else {
+                self::$controller = strtolower($superVar);
                 self::$action     = 'index';
             }
             unset($_GET['s']);
+            unset($_REQUEST['s']);
         }
     }
 
@@ -61,7 +67,8 @@ class Router
                     if ($match && !empty($query)) {//组合后面的参数
                         $param = explode('&', $query);
                         if (count($param) == count($match) && $var = array_combine($param, $match)) {
-                            $_GET = array_merge($_GET, $var);
+                            $_GET     = array_merge($_GET, $var);
+                            $_REQUEST = array_merge($_REQUEST, $var);
                         }
                     }
                     break;
@@ -88,10 +95,10 @@ class Router
         $data = ['argv' => $argv];
         if (!empty($argv['2'])) {
             $param = explode('/', $argv['2']);
-            while ($k = each($param)) {
-                $data[$k['value']] = current($param);
-                next($param);
-            };
+            $num   = count($param);
+            for ($i = 0; $i < $num; $i += 2) {
+                $data[$param[$i]] = $param[$i + 1] ?? "";
+            }
         }
         Registry::set('cli_params', $data);
     }

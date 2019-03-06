@@ -2,6 +2,8 @@
 
 namespace Kuxin;
 
+use Kuxin\Helper\Json;
+
 /**
  * Class Block
  *
@@ -13,28 +15,31 @@ class Block
 
     /**
      * 获取区块
-     * @param string $name
+     * @param string     $name
      * @param array|null $param
      * @return array|mixed|string
      */
     public static function show(string $name, ?array $param = [])
     {
-        $cacheKey = md5(self::getUniqId($name, $param['id'] ?? 0) . '_' . json_encode($param));
+        Block::clearCache('comment.list', 22);
+        $cacheKey = md5(self::getUniqId($name, self::getParamId($param)) . '_' . Json::encode($param));
         $data     = DI::Cache()->debugGet($cacheKey, function ($key) use ($name, $param) {
             if (strpos($name, '.')) {
                 $var = explode('.', $name);
             } else {
-                $var = [$name, 'run'];
+                $var = [$name, 'index'];
             }
             $method = array_pop($var);
             $class  = '\\App\\Block\\' . implode('\\', $var);
             $block  = Loader::instance($class);
-            if (!$block || !method_exists($block, $method)) {
+            if (!$block || !is_callable([$block, $method])) {
                 trigger_error(sprintf('区块 %s 无法加载', $name), E_USER_ERROR);
             }
-            $cacheTime = $param['cachetime'] ?? Config::get('cache.block_time', 600);
             $data      = $block->$method($param);
-            DI::Cache()->set($key, $data, $cacheTime);
+            $cacheTime = $param['cachetime'] ?? $block->getCacheTime();
+            if ($cacheTime && $data) {
+                DI::Cache()->set($key, $data, $cacheTime);
+            }
             return $data;
         });
         //随机数
@@ -59,44 +64,83 @@ class Block
     }
 
     /**
-     * 生成区块名的唯一id 用于缓存
+     * 获取参数中的id值
+     * @param $param
+     * @return string
+     */
+    protected static function getParamId($param): string
+    {
+        if (isset($param['id'])) {
+            return $param['id'];
+        } elseif (isset($param['novelid'])) {
+            return $param['novelid'];
+        } elseif (isset($param['chapterid'])) {
+            return $param['chapterid'];
+        } elseif (isset($param['siteid'])) {
+            return $param['siteid'];
+        } elseif (isset($param['authorid'])) {
+            return $param['authorid'];
+        } elseif (isset($param['categoryid'])) {
+            return $param['categoryid'];
+        } elseif (isset($param['typeid'])) {
+            return $param['typeid'];
+        } else {
+            return '0';
+        }
+    }
+
+    /**
+     * 生成区块名的唯一id 用于缓存 便于清理缓存
      * @param string $name
-     * @param int $id
+     * @param int    $id
      * @return string
      */
     protected static function getUniqId(string $name, int $id = 0): string
     {
-        return DI::Cache()->get('block_uniq_' . $name . '_' . $id, function ($key) use ($name) {
-            $nameUniqId = self::getUniqNameId($name);
-            $uniqid     = uniqid();
-            DI::Cache()->set($key, $nameUniqId . $uniqid);
-            return $nameUniqId . $uniqid;
-        });
-    }
-
-    protected static function getUniqNameId(string $name)
-    {
-        return DI::Cache()->get('block_uniq_' . $name, function ($key) {
+        static $_cache = [];
+        $nameUniqId = self::getUniqNameId($name);
+        $key        = 'block_uniq_' . $nameUniqId . '_' . $id;
+        if (isset($_cache[$key])) {
+            return $_cache[$key];
+        }
+        $data = DI::Cache()->get($key, function ($key) {
             $uniqid = uniqid();
             DI::Cache()->set($key, $uniqid);
             return $uniqid;
         });
+        return $_cache[$key] = $data;
+    }
+
+    /**
+     * 缓存设计
+     * @param string $name
+     * @return mixed
+     */
+    protected static function getUniqNameId(string $name)
+    {
+        static $_cache = [];
+        if (isset($_cache['block_uniq_' . $name])) {
+            return $_cache['block_uniq_' . $name];
+        }
+        $key  = 'block_uniq_' . $name;
+        $data = DI::Cache()->get($key, function ($key) {
+            $uniqid = uniqid();
+            DI::Cache()->set($key, $uniqid);
+            return $uniqid;
+        });
+        return $_cache['block_uniq_' . $name] = $data;
     }
 
     /**
      * 更新区块的唯一
      * @param string $name
-     * @param int $id
+     * @param int    $id
      */
-    public static function clearCache(string $name, int $id = 0): void
+    public static function clearCache(string $name, ?int $id = null): void
     {
-        $nameUniqId = DI::Cache()->get('block_uniq_' . $name, function ($key) {
-            $uniqid = uniqid();
-            DI::Cache()->set($key, $uniqid);
-            return $uniqid;
-        });
-        if ($id) {
-            DI::Cache()->set('block_uniq_' . $name . '_' . $id, $nameUniqId . uniqid());
+        if ($id !== null) {
+            $nameUniqId = self::getUniqNameId($name);
+            DI::Cache()->set('block_uniq_' . $nameUniqId . '_' . $id, uniqid() . uniqid());
         } else {
             DI::Cache()->set('block_uniq_' . $name, uniqid());
         }

@@ -2,6 +2,7 @@
 namespace Kuxin\Oauth;
 
 use Kuxin\Helper\Http;
+use Kuxin\Helper\Json;
 
 class Weibo extends Oauth{
     /**
@@ -59,7 +60,7 @@ class Weibo extends Oauth{
         );
         $params = array_merge($params, $param);
         $data = Http::get($this->apiBase . $api, $params);
-        return json_decode($data, true);
+        return Json::decode($data, true);
     }
     
     /**
@@ -70,7 +71,7 @@ class Weibo extends Oauth{
      * @throws \Exception
      */
     protected function parseToken($result) {
-        $data = json_decode($result, true);
+        $data = Json::decode($result, true);
         if (isset($data['access_token'])) {
             $this->token = $data['access_token'];
             $this->openid = $data['uid'];

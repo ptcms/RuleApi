@@ -7,8 +7,7 @@ use Kuxin\Helper\Http;
 
 class Oss
 {
-
-
+    
     public function __construct($config)
     {
         if (empty($config['key'])) {
@@ -32,7 +31,7 @@ class Oss
         $this->host            = $config['bucket'] . '.' . $config['endpoint'];
         $this->api             = 'http://' . $this->host . '/';
         $this->preUrl          = $config['url'];
-        $this->path            = $config['path'];
+        $this->path            = '/' . ltrim($config['path'], '/');
     }
 
     public function getPath($object)
@@ -66,8 +65,7 @@ class Oss
         $headers['Authorization'] = "OSS {$this->accessKeyId}:{$sign}";
         $url                      = $this->api . $path;
         $res                      = Http::curl($url, [], $method, $headers, $options);
-        $headers                  = Http::parse_headers($res);
-        if ($headers['x-oss-meta-mtime']) {
+        if (strpos($res, 'Content-MD5')) {
             return Http::parse_content($res);
         } else {
             return false;

@@ -21,11 +21,11 @@ class Mysql
     protected $Transactions;
 
     /**
-     * 数据库日志
+     * 数据库语句
      *
      * @var array
      */
-    public $logs = [];
+    public $sql = '';
 
     /**
      * debug开关
@@ -51,11 +51,15 @@ class Mysql
     {
         //连接数据库
         $params['charset'] = empty($params['charset']) ? 'utf8' : $params['charset'];
-        $this->db_link     = new \PDO("mysql:host={$params['host']};port={$params['port']};dbname={$params['name']}", $params['user'], $params['pwd'], []);
+        try {
+            $this->db_link = new \PDO("mysql:host={$params['host']};port={$params['port']};dbname={$params['name']}", $params['user'], $params['pwd'], []);
+        } catch (\Exception $e) {
+            trigger_error($e->getMessage());
+        }
         $this->db_link->query("SET NAMES {$params['charset']}");
         $this->db_link->query("SET sql_mode='NO_ENGINE_SUBSTITUTION'");
         if (!$this->db_link) {
-            trigger_error($params['driver'] . ' Server connect fail! <br/>Error Message:' . $this->error() . '<br/>Error Code:' . $this->errno(), E_USER_ERROR);
+            trigger_error($params['driver'] . ' Server connect fail! <br/>Error Message:' . $this->db_link->error() . '<br/>Error Code:' . $this->db_link->errno(), E_USER_ERROR);
         }
         $this->debug = Config::get('database.debug', Config::get('app.debug', false));
     }
@@ -84,16 +88,16 @@ class Mysql
         foreach ($bindparams as $k => $v) {
             $this->PDOStatement->bindValue($k, $bindparams[$k]);
         }
+        $realSql = $this->getRealSql($sql, $bindparams);
         if ($this->debug) {
-            $realSql = $this->getRealSql($sql, $bindparams);
-            $t       = microtime(true);
-            $result  = $this->PDOStatement->execute();
-            $t       = number_format(microtime(true) - $t, 5);
+            $t      = microtime(true);
+            $result = $this->PDOStatement->execute();
+            $t      = number_format(microtime(true) - $t, 5);
             Registry::merge('_sql', $t . ' - ' . $realSql);
-            $this->logs[] = $realSql;
         } else {
             $result = $this->PDOStatement->execute();
         }
+        $this->sql = $realSql;
         Registry::setInc('_sqlnum');
         return $result;
     }
@@ -106,7 +110,11 @@ class Mysql
      */
     public function errorInfo()
     {
-        $error = $this->PDOStatement->errorInfo();
+        if ($this->PDOStatement) {
+            $error = $this->PDOStatement->errorInfo();
+        } else {
+            $error = $this->db_link->errorInfo();
+        }
         if ($error['0'] == '0000') {
             return '';
         } else {
@@ -195,7 +203,7 @@ class Mysql
     public function startTrans()
     {
         if ($this->Transactions == false) {
-            $this->db_link->beginTrans();
+            $this->db_link->beginTransaction();
             $this->Transactions = true;
         }
         return true;
@@ -308,7 +316,7 @@ class Mysql
 
     public function lastSql()
     {
-        $sql = end($this->logs);
+        $sql = $this->sql;
         if ($sql) {
             return $sql;
         } else {

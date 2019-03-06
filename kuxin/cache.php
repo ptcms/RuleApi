@@ -40,11 +40,12 @@ class Cache
      * @param     $key
      * @param     $value
      * @param int $time
+     * @return bool
      */
-    public function set(string $key, $value, $time = 0): void
+    public function set(string $key, $value, $time = 0):bool
     {
         Registry::setInc('_cacheWrite');
-        $this->handler->set($key, $value, $time);
+        return $this->handler->set($key, $value, (int)$time);
     }
 
     /**
@@ -133,7 +134,7 @@ class Cache
      */
     public function __call($method, $args)
     {
-        if (method_exists($this->handler, $method)) {
+        if (is_callable([$this->handler, $method])) {
             call_user_func_array([$this->handler, $method], $args);
         } else {
             trigger_error('Cache中不存在的方法');

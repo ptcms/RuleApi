@@ -10,6 +10,9 @@ class File
 
     public function __construct($config)
     {
+        if (strpos($config['path'], "ROOT") !== false) {
+            $config['path'] = str_replace('ROOT', KX_ROOT, $config['path']);
+        }
         $this->path = $config['path'];
         $this->url  = $config['url'] ?? "";
     }
@@ -85,5 +88,10 @@ class File
     public function error()
     {
         return '';
+    }
+
+    public function flush()
+    {
+        return $this->remove('');
     }
 }

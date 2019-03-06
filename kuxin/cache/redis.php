@@ -28,9 +28,7 @@ class Redis
         if (isset($option['password']) && $option['password'] !== null) {
             $this->handler->auth($option['password']);
         }
-        if (isset($option['password']) && $option['db']) {
-            $this->handler->select($option['db']);
-        }
+        $this->handler->select(($option['db'] ?? 0));
         $this->prefix = $option['prefix'] ?? Config::get('cache.prefix', '');
     }
 

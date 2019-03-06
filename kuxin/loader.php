@@ -2,6 +2,8 @@
 
 namespace Kuxin;
 
+use Kuxin\Helper\Serialize;
+
 /**
  * Class Loader
  *
@@ -24,7 +26,7 @@ class Loader
     /**
      * 加载文件
      *
-     * @param $filename
+     * @param string $filename
      * @return mixed
      */
     public static function import(string $filename)
@@ -47,14 +49,24 @@ class Loader
      */
     public static function instance(string $class, array $args = [])
     {
-        $key = md5($class . '_' . serialize($args));
+        $key = md5($class . '_' . Serialize::encode($args));
         if (empty(self::$_class[$key])) {
             try {
                 self::$_class[$key] = (new \ReflectionClass($class))->newInstanceArgs($args);;
-            } catch (\ReflectionException $e) {
-                return $e->getMessage();
+            } catch (\Exception $e) {
+                return false;
             }
         }
         return self::$_class[$key];
+    }
+
+
+    /**
+     * @param $classname
+     */
+    public static function autoload($classname): void
+    {
+        $file = KX_ROOT . '/' . strtr(strtolower($classname), '\\', '/') . '.php';
+        Loader::import($file);
     }
 }

@@ -12,18 +12,18 @@ use Kuxin\Session;
  */
 class Verify
 {
-    
+
     /**
      * 产生随机字串，可用来自动生成密码
      * 默认长度6位 字母和数字混合 支持中文
      *
      * @param int    $len      长度
-     * @param string $type     字串类型
+     * @param int    $type     字串类型
      *                         0 字母 1 数字 其它 混合
      * @param string $addChars 额外字符
      * @return string
      */
-    static public function randString($len = 6, $type = '', $addChars = '')
+    static public function randString($len = 6, $type = 0, $addChars = '')
     {
         $str = '';
         switch ($type) {
@@ -31,7 +31,7 @@ class Verify
                 $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' . $addChars;
                 break;
             case 1:
-                $chars = str_repeat('0123456789', 3);
+                $chars = str_repeat('0123456789', $len);
                 break;
             case 2:
                 $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' . $addChars;
@@ -61,7 +61,7 @@ class Verify
         }
         return $str;
     }
-    
+
     /**
      * 生成图像验证码
      *
@@ -90,7 +90,7 @@ class Verify
         $g   = [225, 236, 237, 255];
         $b   = [225, 236, 166, 125];
         $key = mt_rand(0, 3);
-        
+
         $backColor   = imagecolorallocate($im, $r[$key], $g[$key], $b[$key]); //背景色（随机）
         $borderColor = imagecolorallocate($im, 100, 100, 100); //边框色
         imagefilledrectangle($im, 0, 0, $width - 1, $height - 1, $backColor);
@@ -104,12 +104,12 @@ class Verify
             imagesetpixel($im, mt_rand(0, $width), mt_rand(0, $height), $stringColor);
         }
         for ($i = 0; $i < $length; $i++) {
-            imagestring($im, 5, $i * 10 + 5, mt_rand(1, 8), $randval{$i}, $stringColor);
+            imagestring($im, rand(2,5), $i * 10 + 5, mt_rand(1, 8), $randval{$i}, $stringColor);
         }
         self::output($im, $type);
         exit;
     }
-    
+
     /**
      * 输出图像
      *
@@ -131,5 +131,5 @@ class Verify
         imagedestroy($im);
         exit;
     }
-    
+
 }

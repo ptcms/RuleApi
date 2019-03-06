@@ -11,6 +11,8 @@ namespace Kuxin;
 class Session
 {
 
+    public static $start = false;
+
     /**
      * 启动session
      *
@@ -18,7 +20,7 @@ class Session
      */
     public static function start(array $config = [])
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
+        if (self::$start || session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
         if (!$config) {
@@ -30,15 +32,17 @@ class Session
             //ini_set("session.save_path", "tcp://127.0.0.1:11211");
         }
         session_start();
+        self::$start = true;
     }
 
     /**
      * @param string $name
-     * @param mixed $default
+     * @param mixed  $default
      * @return mixed
      */
     public static function get(string $name = '', $default = null)
     {
+        self::start();
         if ($name == '')
             return $_SESSION;
         //数组模式 找到返回
@@ -60,8 +64,19 @@ class Session
     }
 
     /**
+     * 是否存在
+     * @param string $key
+     * @return bool
+     */
+    public static function has(string $key)
+    {
+        self::start();
+        return isset($_SESSION[$key]);
+    }
+
+    /**
      * @param        $key
-     * @param mixed $value
+     * @param mixed  $value
      * @return bool
      */
     public static function set(string $key, $value)
@@ -76,6 +91,7 @@ class Session
      */
     public static function remove(string $key): bool
     {
+        self::start();
         if (!isset($_SESSION[$key])) {
             return false;
         }

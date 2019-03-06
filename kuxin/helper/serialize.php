@@ -34,10 +34,14 @@ class Serialize
      */
     public static function decode($data)
     {
-        if (function_exists('swoole_unserialize')) {
-            return swoole_unserialize($data);
-        } else {
-            return unserialize($data);
+        if(is_string($data) && $data){
+            if (function_exists('swoole_unserialize')) {
+                return swoole_unserialize($data);
+            } else {
+                return unserialize($data);
+            }
+        }else{
+            return null;
         }
     }
 }

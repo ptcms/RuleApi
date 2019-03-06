@@ -12,21 +12,21 @@ class DI
 {
 
     /**
-     * @param string $node
+     * @param string $onnection
      * @return \Kuxin\Cache
      */
-    public static function Cache(string $node = 'common'): \Kuxin\Cache
+    public static function Cache(?string $onnection = 'common'): \Kuxin\Cache
     {
-        $hanlder = Registry::get("cache.{$node}");
+        $hanlder = Registry::get("cache.{$onnection}");
         if (!$hanlder) {
-            $config = Config::get("cache.{$node}");
+            $config = Config::get("cache.{$onnection}");
             if ($config) {
                 $hanlder = Loader::instance('\\Kuxin\\Cache', [$config]);
                 if ($hanlder) {
-                    Registry::set("cache.{$node}", $hanlder);
+                    Registry::set("cache.{$onnection}", $hanlder);
                 }
             } else {
-                trigger_error("缓存节点配置[{$node}]不存在", E_USER_ERROR);
+                trigger_error("缓存节点配置[{$onnection}]不存在", E_USER_ERROR);
             }
         }
         return $hanlder;
