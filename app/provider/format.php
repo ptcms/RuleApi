@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Component;
+namespace App\Provider;
 
 use Kuxin\Filter;
 

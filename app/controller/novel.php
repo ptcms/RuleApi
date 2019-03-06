@@ -5,7 +5,7 @@ namespace App\Controller;
 
 use App\Rule\Yc\Qidian;
 
-use App\Component\Format;
+use App\Provider\Format;
 use Kuxin\Controller;
 use Kuxin\DI;
 use Kuxin\Helper\Json;

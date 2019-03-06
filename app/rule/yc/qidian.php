@@ -2,7 +2,7 @@
 
 namespace App\Rule\Yc;
 
-use App\Component\Format;
+use App\Provider\Format;
 use App\Rule\Kernel;
 use Kuxin\Helper\Collect;
 use Kuxin\Helper\Json;
