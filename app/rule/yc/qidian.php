@@ -17,7 +17,7 @@ class Qidian extends Kernel
 
     public function getList($page)
     {
-        $url     = 'https://r.qidian.com/vipup?style=2&t=[timestamp]&page=' . $page;
+        $url     = 'https://www.qidian.com/rank/vipup?style=2&t=[timestamp]&page=' . $page;
         $content = Collect::getContent($url);
         if (!$content || strlen($content) < 1000) {
             return '获取内容失败：链接' . $url . ' 长度' . strlen($content);
