@@ -40,8 +40,8 @@ class Novel extends Controller
         if (isset($this->rule[$site])) {
             $classname = $this->rule[$site];
         } else {
-            if (is_file(KX_ROOT . '/app/model/custom/' . $site . '.php')) {
-                Loader::import(KX_ROOT . '/app/model/custom/' . $site . '.php');
+            if (is_file(KX_ROOT . '/app/rule/custom/' . $site . '.php')) {
+                Loader::import(KX_ROOT . '/app/rule/custom/' . $site . '.php');
                 $classname = '\\App\\Rule\\Custom\\' . $site;
             } else {
                 return [
